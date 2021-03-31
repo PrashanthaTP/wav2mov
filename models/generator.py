@@ -192,12 +192,16 @@ class AudioEnocoder(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv = nn.Sequential(
-            nn.Conv1d(1, 1, 3, 3),  # ((666-3)/3)+1 = 663/3 +1 = 222
-            nn.BatchNorm1d(1),
+            nn.Conv1d(1, 64, 3, 3),  # ((666-3)/3)+1 = 663/3 +1 = 222
             nn.ReLU(),
-            nn.Conv1d(1, 1, 3, 3),  # ((222-3)/3)+1 = 219/3+1 = 73+1 = 74
-            nn.BatchNorm1d(1),
-            nn.ReLU()
+            nn.Conv1d(64, 1, 3, 3),  # ((222-3)/3)+1 = 219/3+1 = 73+1 = 74
+            nn.ReLU(),
+            # nn.Conv1d(128,256,4,1),#(74-4)/1 +1 = 71
+            # nn.ReLU(),
+            # nn.Conv1d(256,512,4,1),#(71-4)/1+1 = 68
+            # nn.ReLU(),
+            # nn.Conv1d(512,1,5,1),#(68-5)/1+1 = 64
+            # nn.ReLU()
         )
         self.fc = nn.Sequential(nn.Linear(74, 128), nn.ReLU(),
                                 nn.Linear(128, 64), nn.ReLU())
@@ -257,7 +261,7 @@ class GeneratorBW(BaseModel):
  
         x = torch.cat([self.audio_enc(audio).reshape(-1, 1, 8, 8),
                        self.noise_enc().reshape(-1, 1, 8, 8)], dim=1)
-    
+        # x = self.audio_enc(audio).reshape(-1,1,8,8)
         return self.identity_enc(frame_img, x)
 
     def get_optimizer(self):

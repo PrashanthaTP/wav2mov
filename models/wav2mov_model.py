@@ -50,8 +50,8 @@ class Wav2MovBW(TemplateModel):
         
         self.gen = GeneratorBW(hparams['gen'])
         self.seq_disc = SequenceDiscriminatorCNN(hparams['disc']['sequence_disc_cnn'])
-        self.id_disc = PatchDiscriminator(hparams['disc']['patch_disc'])
-        # self.id_disc = IdentityDiscriminator(hparams['disc']['identity_disc'])
+        # self.id_disc = PatchDiscriminator(hparams['disc']['patch_disc'])
+        self.id_disc = IdentityDiscriminator(hparams['disc']['identity_disc'])
         self.sync_disc = SyncDiscriminator(hparams['disc']['sync_disc'])
 
         init_net(self.gen)

@@ -29,9 +29,7 @@ def add_to_board(tensor_logger, losses, global_step,scalar_type):
 def add_img_grid(tensor_logger,img_grid,global_step,img_type):
     tensor_logger.add_image(img_grid,img_type,global_step)
 
-# TODO : add progress meter 
-# TODO : logic for saving models
-# TODO : logic for resuming training from checkpoint
+
 def train_model(options,hparams, config, logger):
     loaders, mean,std = get_dataloaders(config, hparams, shuffle=True)
     logger.info(f'option : num_videos : {options.num_videos} | mean : {mean} std: {std}')
@@ -42,8 +40,7 @@ def train_model(options,hparams, config, logger):
          vtransforms.Resize((hparams['img_size'],hparams['img_size'])),
          vtransforms.Normalize(mean,std)
         ])
-    # To_BW = vtransforms.Grayscale(1)
-    # Resize = vtransforms.Resize(hparams['img_size'])
+
 
     strided_audio = StridedAudio(stride=stride, coarticulation_factor=0)
     if hparams['device'] == 'cpu':
@@ -53,8 +50,7 @@ def train_model(options,hparams, config, logger):
             'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     model = Wav2MovBW(config, hparams, logger)
-    
-    # model.to(device)
+   
     num_epochs = hparams['num_epochs']
 
     if options.log in ['y','yes']:
@@ -68,7 +64,8 @@ def train_model(options,hparams, config, logger):
     
     progress_meter = ProgressMeter(num_epochs,epoch_loss_meters.as_list())
 
-    logger.info(f'10th frame from last of every video is considered as reference image for the generator and also last frame of every video is omitted.')
+    STILL_IMAGE_IDX = 5
+    logger.info(f'{STILL_IMAGE_IDX}th frame from last of every video is considered as reference image for the generator and also last frame of every video is omitted.')
     logger.info(f'Training started on {device}')
     steps = 0
     
@@ -91,11 +88,11 @@ def train_model(options,hparams, config, logger):
             get_framewise_audio = strided_audio.get_frame_wrapper(audio)
             # video is of shape(batch_size,num_video_frames,channels,H,W)
             #? Think  again : which frame should be considered as reference image?
-            still_image = video[:, -5, :, :, :]# considering 10 the frame from last hoping the speaker closes his/her mouth and is in rest postion with respect to talking
+            still_image = video[:, -STILL_IMAGE_IDX, :, :, :]# considering 10 the frame from last hoping the speaker closes his/her mouth and is in rest postion with respect to talking
             still_image = transforms(still_image)
             model.set_condition(still_image)
-            # logger.info(f'video shape {video.shape}')
-            num_video_frames = video.shape[1] #assuming there is only one frame
+       
+            num_video_frames = video.shape[1] #video is of shape : (batch_size,num_frames,channels,img_height,img_width)
             
             """
             #? What happens if the batch size is not 1
@@ -112,11 +109,7 @@ def train_model(options,hparams, config, logger):
                 audio_frame,_ = get_framewise_audio(idx)
                 video_frame = transforms(video_frame)
            
-                # if idx%30==0:
-                #     logger.debug(f'\nEpoch {epoch+1}/{num_epochs} : video num {batch_idx+1}/{len(train_dl)} : Processing video frame :{idx+1}/{num_video_frames}')
-                #     logger.debug(f'audio shape : {audio.shape} | audio_frame shape : {audio_frame.shape} | video_frame shape : {video_frame.shape}')
-                #     logger.debug(loss_meters.average())
-                # logger.info(f'still image {still_image.shape} video_frame {video_frame.shape} audio_frame : {audio_frame.shape}')
+            
                 model.set_input(audio_frame, video_frame)
                 losses = model.optimize_parameters()
 

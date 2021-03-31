@@ -5,6 +5,7 @@ It is the entry point to various functions
 
 
 """
+import os
 import torch 
 from torch.utils.tensorboard.writer import SummaryWriter 
 
@@ -13,7 +14,7 @@ from wav2mov.config import config
 from wav2mov.params import params
 
 from wav2mov.main.preprocess import create_from_grid_dataset
-from wav2mov.main.train import train_model
+from wav2mov.main.train_v4 import train_model
 from wav2mov.main.test import test_model
 
 from wav2mov.main.options import Options
@@ -35,6 +36,15 @@ def train(train_logger,args_options):
 
 def test(test_logger,args_options):
     test_model(args_options,params,config,test_logger)
+
+
+def save_message(options):
+    if not getattr(options,'msg'):return
+    path = os.path.join(os.path.dirname(config['log_fullpath']),f'message_{config.version}.txt')
+    print('message written to ',path)
+    with open(path,'a+') as file:
+        file.write(options.msg)
+        file.write('\n')
     
 if __name__ == '__main__':
     options = Options().parse()
@@ -43,7 +53,7 @@ if __name__ == '__main__':
         logger = get_logger(filehandler_required=True)
     else:
         logger = get_logger(filehandler_required=False)
-        
+    save_message(options)
     try:
         allowed = ('y','yes')
         if options.preprocess in allowed:

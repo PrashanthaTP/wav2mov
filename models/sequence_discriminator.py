@@ -1,5 +1,7 @@
+
 import torch
 from torch import nn,optim
+from torch.functional import Tensor
 from torch.nn.modules.activation import LeakyReLU
 
 from wav2mov.core.models.base_model import BaseModel
@@ -42,40 +44,44 @@ class SequenceDiscriminator(BaseModel):
 
 class SequenceDiscriminatorCNN(BaseModel):
 
-    def __init__(self,hparams):
+    def __init__(self,hparams,use_bias=True):
         super().__init__()
         self.hparams = hparams
         self.in_channels = hparams['in_channels']
         self.chs = hparams['chs']
         chs = [self.in_channels] + self.chs
         self.cnn = nn.ModuleList([
-            nn.Sequential(nn.Conv3d(chs[i], chs[i+1], (2,4,4), (2,2,2),(1,1,1),bias=False),
-                          nn.BatchNorm3d(chs[i+1]),
+            nn.Sequential(nn.Conv3d(chs[i], chs[i+1], (3,4,4), (1,2,2),(1,1,1),bias=use_bias),
+                        #   nn.BatchNorm3d(chs[i+1]),
                           nn.LeakyReLU(0.2) ) for i in range(len(chs)-2)
             ])
         self.cnn.append(nn.Conv3d(chs[-2], chs[-1], (2, 4, 4), (2, 2, 2), (1, 1, 1)))
         
-        
-    def forward(self,x):
-        """sequence discriminator using 3d convolution for spatio temporal feature extraction
-
-
-
-        Args:
-            x1 (Tensor): prev frame : shape = (N,num_channels,img_size)
-            x2 (Tensor): curr frame : shape = (N,num_channels,img_size)
         """
-        x1 = x[0]
-        batch_size = x1.shape[0]
-        for frame in x[1:]:
-           x1 = torch.cat([x1,frame.unsqueeze(dim=2)])
+        [8,64,128,256,1],
+                    in          out
+        filter 1 : 2x256x256  | ((2-2)+2)/2 +1 = 2
+                                ((256-4+2)/2) + 1 = 
+                                
+                    20x256x256 | 20-3+2/1 + 1 = 20
+        """ 
+    def forward(self,*x):
+        """sequence discriminator using 3d convolution for spatio temporal feature extraction
+        """
       
-        
+        if len(x)==1 and isinstance(x[0],Tensor):
+            x = x[0]
+        else:
+            x = torch.cat([frame.unsqueeze(dim=2) for frame in x if frame.dim()==4 ],dim=2)
+            
+
+        batch_size = x.shape[0]
+
         for cnn in self.cnn:
-            x1 = cnn(x1)
+            x = cnn(x)
             # print(f'out shape : {x1.shape}')
         
-        return x1.reshape(batch_size,-1)
+        return x.reshape(batch_size,-1)
         
 
     def get_optimizer(self):

@@ -25,10 +25,13 @@ class Options():
                             type=str,help='device where processing should be done')
         
         self.parser.add_argument('--model_path','-path',
-                            type=str,help='genetator checkpoint fullpath')
+                            type=str,help='generator checkpoint fullpath')
         
         self.parser.add_argument('--num_videos','-v',
                             type=int,help='num of videos on which the model should be trained')
+        
+        
+        self.parser.add_argument('--msg','-m',type=str,help='any message about current run')
         
     def parse(self):
         return self.parser.parse_args()

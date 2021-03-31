@@ -25,15 +25,22 @@ class AverageMeter:
         self.sum = 0
         self.count = 0
         self.avg = 0
+    
+    def _update_average(self):
+        self.avg = self.sum/self.count 
         
     def update(self,val,n):
-        self.count += n 
+        self.count +=n
         self.sum += val*n 
-        self.avg = self.sum/self.count 
+        self._update_average()
         
     def __str__(self):
         fmt_str = '{name} : {avg' + self.fmt + '}'
         return fmt_str.format(**self.__dict__)
+    
+    def add(self,val):
+        self.sum += val
+        self._update_average()
     
 class AverageMetersList:
     def __init__(self, names, fmt=':0.4f'):
@@ -53,10 +60,17 @@ class AverageMetersList:
     def average(self):
         return {name:meter.avg for name,meter in self.meters.items()}
     
+    def get(self,name):
+        if name not in self.meters:
+            raise KeyError(f'{name} has not average meter initialized')
+        return self.meters.get(name)
     
+    def __str__(self):
+        avg = self.average()
+        return '\t'.join(f'{key}:{val:0.4f}' for key,val in avg.items())
     
 class ProgressMeter:
-    def __init__(self,num_epochs,meters,prefix=""):
+    def __init__(self,num_epochs,meters,prefix=''):
         self.batch_fmt_str = self._get_epoch_fmt_str(num_epochs)
         self.meters = meters
         self.prefix = prefix
@@ -68,6 +82,6 @@ class ProgressMeter:
     
     def _get_epoch_fmt_str(self,num_epochs):
         num_digits = len(str(num_epochs//1))
-        fmt = '{:' + str(num_digits) + 'd}'
+        fmt = '{:' + str(num_digits) + 'd}/'
         return '[' + fmt + fmt.format(num_epochs) + ']'
     

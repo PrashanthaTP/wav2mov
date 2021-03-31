@@ -8,7 +8,7 @@ from torchvision import transforms as vtransforms
 from torchvision import utils as vutils
 
 from wav2mov.models.generator import GeneratorBW
-from wav2mov.models.wav2mov_model import Wav2MovBW
+from wav2mov.models.wav2mov_2 import Wav2MovBW
 from wav2mov.main.data import get_dataloaders
 from wav2mov.utils.audio import StridedAudio
 from wav2mov.utils.plots import show_img,save_gif
@@ -22,12 +22,20 @@ from wav2mov.utils.plots import show_img,save_gif
 def test_model(options,hparams, config, logger):
     checkpoint = options.model_path
     loaders,mean,std= get_dataloaders(config, hparams, shuffle=True)
-    val_dl = loaders.val
+    # val_dl = loaders.val
+    # for i in range(25):
+    #     sample = next(iter(val_dl))
+    #     sample = next(iter(val_dl))
+    
+    sample = next(iter(loaders.val))
+        
     stride = hparams['data']['audio_sf']//hparams['data']['video_fps']
     num_channels = hparams['img_channels']
+    mean,std = 0.5,0.5
     
     transforms = vtransforms.Compose(
-        [vtransforms.Grayscale(1),
+        [
+        vtransforms.Grayscale(1),
          vtransforms.Resize((hparams['img_size'], hparams['img_size'])),
          vtransforms.Normalize(mean,std)
         ]
@@ -39,13 +47,13 @@ def test_model(options,hparams, config, logger):
 
 
     model = GeneratorBW(hparams=hparams['gen'])
-   
-    model.load_state_dict(torch.load(checkpoint))
+    checkpoint = torch.load(checkpoint)
+    if 'state_dict' in checkpoint:
+        model.load_state_dict(checkpoint['state_dict'])
+    else:
+        model.load_state_dict(checkpoint)
     model.eval()
     
-
-    sample = next(iter(val_dl))
-    sample = next(iter(val_dl))
 
        
 
@@ -58,7 +66,7 @@ def test_model(options,hparams, config, logger):
 
     get_framewise_audio = strided_audio.get_frame_wrapper(audio)
  
-    still_image = video[:, -5, :, :, :]
+    still_image = video[:, -25, :, :, :]
     still_image = transforms(still_image)
     # vutils.save_image(still_image,'still_image.png')
     # return

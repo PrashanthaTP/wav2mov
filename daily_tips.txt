@@ -93,8 +93,27 @@ Observations
 
 ==========================================================================================
 March 23 Tuesday
-+ having batch norm does not work in sync discriminator
++ having batch norm does not work in sync discriminator X
 
 + using noisy labels => not works
 		+ fake labels : 0.2
 		+ real labels : 0.9
+
+==========================================================================================
+March 24 Wednesday
+used 3d convoltions for sequence discriminator
+much 
+
+==========================================================================================
+March 25 Thursday
++ increased the number of filters in identity discriminator
+
+============================================================================================
+March 28
++ leaky relu does not work for audio encoder in generator.
++ patch gan is also works well as identity discriminator.
+
+
+==========================================================
+March 30 Tuesday
+making lambda zero for l1 loss makes images black

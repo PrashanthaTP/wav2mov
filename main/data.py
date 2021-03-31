@@ -25,7 +25,7 @@ def get_dataloaders(config,params,shuffle=True,get_mean_std=True):
     train_sz = (N*9)//10
     test_sz = N-train_sz
     train_ds , test_ds = random_split(dataset,[train_sz,test_sz])
-    train_dl = DataLoader(train_ds,batch_size=batch_size,shuffle=shuffle)
+    train_dl = DataLoader(train_ds,batch_size=batch_size,shuffle=shuffle,pin_memory=True)
     test_dl = DataLoader(test_ds,batch_size=batch_size,shuffle=shuffle)
     
     if not all(hparams.get(item,None) for item in ('mean','std')):

@@ -21,7 +21,7 @@ class AudioVideoDataset(Dataset):
         self.filenames = []
         with open(filenames_text_filepath,'r') as file: 
             self.filenames = file.read().split('\n')
-        
+        # self.filenames = self.filenames[:100]
     def __len__(self):
         return len(self.filenames)
     

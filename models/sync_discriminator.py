@@ -48,31 +48,39 @@ class SyncDiscriminator(BaseModel):
 
     """
 
-    def __init__(self, hparams):
+    def __init__(self, hparams,use_bias=True):
         super().__init__()
         self.hparams = hparams 
         self.desc_a = nn.Sequential(
-            nn.Conv1d(1, 64, 3, 3,bias=False),#input 666 output (666-3+0)/3 + 1 = 663/3 + 1 = 222
-            nn.BatchNorm1d(64),
+            # nn.Conv1d(1, 64, 5,1,1,bias=use_bias),#input 666 output (666-5+2)/1 = 663
+            # nn.ReLU(),
+            # nn.Conv1d(64, 128, 3, 3,bias=use_bias),#((663-3+0)/3)+1 = 660/3 +1 =221
+            # nn.ReLU(),
+            # nn.Conv1d(128, 512,3,1,1),#((221-3+2)/2)+1 = 220 +1 = 221
+            # nn.ReLU(),
+            # nn.Conv1d(512,1,3, 1),#((221-3)/1)+1 = 219
+            # nn.ReLU(),
+            nn.Conv1d(1, 64, 3, 3,bias=use_bias),#input 666 output (666-3+0)/3 + 1 = 663/3 + 1 = 222
             nn.ReLU(),
-            nn.Conv1d(64, 128, 3, 3,bias=False),#((222-3+0)/3)+1 = 219/3 +1 =74
-            nn.BatchNorm1d(128),
+            nn.Conv1d(64, 128, 3, 3,bias=use_bias),#((222-3+0)/3)+1 = 219/3 +1 =74
             nn.ReLU(),
             nn.Conv1d(128, 4,4, 2, 1),#((74-4+2)/2)+1 = 36 +1 = 37
+            nn.ReLU(),
+            # nn.Conv1d(512,1,4, 2, 1),#((74-4+2)/2)+1 = 36 +1 = 37
+            # nn.ReLU(),
         
-            nn.ReLU()
             )
 
         # height and width are halved in each step
         self.desc_v = nn.Sequential(
-            nn.Conv2d(self.hparams['in_channels'], 6, 4, 2, 1,bias=False), # height_new = ((128-4+2)/2)+1 = 126/2 + 1 = 64
-            nn.BatchNorm2d(6),                                # width_new = 127+1 = 128
+            nn.Conv2d(self.hparams['in_channels'], 8, 4, 2, 1,bias=use_bias), # height_new = ((128-4+2)/2)+1 = 126/2 + 1 = 64
+            # nn.BatchNorm2d(6),                                # width_new = 127+1 = 128
             nn.LeakyReLU(0.2),  
-            nn.Conv2d(6, 32, 4, 2, 1,bias=False), # #H_new = 32, W_new = 64
-            nn.BatchNorm2d(32),       
+            nn.Conv2d(8, 32, 4, 2, 1,bias=use_bias), # #H_new = 32, W_new = 64
+            # nn.BatchNorm2d(32),       
             nn.LeakyReLU(0.2),  
-            nn.Conv2d(32, 64, 4, 2, 1,bias=False), #H_new,W_new = 16,32
-            nn.BatchNorm2d(64),
+            nn.Conv2d(32, 64, 4, 2, 1,bias=use_bias), #H_new,W_new = 16,32
+            # nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2),
             nn.Conv2d(64, 1, 4, 2, 1),  #H_new,W_new = 8,16
             nn.LeakyReLU(0.2)
@@ -80,7 +88,7 @@ class SyncDiscriminator(BaseModel):
         )
 
         self.fc = nn.Sequential(
-            nn.Linear(4*37+8*16, 256),
+            nn.Linear(37*4+8*16, 256),
             nn.ReLU(),
             nn.Linear(256, 128)
             )

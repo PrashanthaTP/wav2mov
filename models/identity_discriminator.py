@@ -9,7 +9,7 @@ class Block(nn.Module):
     def __init__(self,in_ch,out_ch,kernel,stride,padding,is_final_layer=False):
         super().__init__()
         self.conv1 = nn.Conv2d(in_ch,in_ch*2,kernel,stride,padding)
-        self.norm = nn.BatchNorm2d(in_ch*2)
+        # self.norm = nn.BatchNorm2d(in_ch*2)
         self.conv2 = nn.Conv2d(in_ch*2,out_ch,kernel,stride,padding)
         self.is_final_layer = is_final_layer
     def forward(self,x):
@@ -39,10 +39,10 @@ class IdentityDiscriminator(BaseModel):
         super().__init__()
         self.hparams = hparams
         chs = [self.hparams['in_channels']*2]+self.hparams['chs']
-        self.blocks = nn.ModuleList([Block(chs[i],chs[i+1],4,2,1) for i in range(len(chs)-2)])
+        self.blocks = nn.ModuleList(nn.Sequential(nn.Conv2d(chs[i],chs[i+1],4,2,1),nn.ReLU()) for i in range(len(chs)-2))
         # blocks = [Block(chs[i],chs[i+1],4,2,1) for i in range(len(chs)-1)]
     
-        self.desc = nn.Sequential(*self.blocks, Block(chs[-2], chs[-1], 4, 2, 1,is_final_layer=True))
+        self.desc = nn.Sequential(*self.blocks, nn.Conv2d(chs[-2], chs[-1], 4, 2, 1))
         
     def forward(self,x,y):
         """

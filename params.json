@@ -3,7 +3,7 @@
     "seed":10,
     "device":"cpu",
     "img_size":256,
-    "num_epochs":1,
+    "num_epochs":4,
 	"img_channels":1,
     "coarticulation_factor":0,
 	"data": {
@@ -16,27 +16,27 @@
 	"disc": {
 		"sync_disc": {
 			"in_channels": 1,
-            "lr":1e-5
+            "lr":10e-5
 		},
 		"sequence_disc": {
 			"in_channels":1,
 			"in_size": 65536,
 			"h_size": 100,
 			"num_layers": 1,
-            "lr":1e-5
+            "lr":10e-5
 			
 		},
 		"sequence_disc_cnn":{
 				"in_channels":1,
-				"chs":[8,64,128,256,1],
-				"lr":1e-5
+				"chs":[8,64,128,256,512,1024,512,1],
+				"lr":10e-5
 
 		},
 		"identity_disc": {
-			"in_channels": 1,
-			"chs": [16, 32,32, 1],
+			"in_channels":1,
+			"chs": [8, 64,128, 1],
             "lr":1e-4
-		},
+		 },
 		"patch_disc":{
 			"ndf":64,
 			"in_channels":1,
@@ -57,8 +57,10 @@
 
 	"scales":{
 			"lambda_seq_disc":0.6,
-			"lambda_sync_disc":0.8,
+			"lambda_sync_disc":0.9,
 			"lambda_id_disc":1,
 			"lambda_L1":600
 		}
+
+		
 }
