@@ -1,12 +1,13 @@
 """ Training script : can start from previous checkpoint"""
 import os
 import time
+from wav2mov.utils.plots import show_img
 
 
 import torch
 from torchvision import transforms as vtransforms
 
-from wav2mov.models.wav2mov_2 import Wav2MovBW
+from wav2mov.models.wav2mov_v3 import Wav2MovBW
 from wav2mov.main.data import get_dataloaders
 from wav2mov.utils.audio import StridedAudio
 from wav2mov.utils.misc import AverageMetersList, ProgressMeter
@@ -40,8 +41,8 @@ def add_img_grid(tensor_logger, img_grid, global_step, img_type):
     tensor_logger.add_image(img_grid, img_type, global_step)
 
 
-def get_train_dl(config, hparams):
-    loaders, mean, std = get_dataloaders(config, hparams, shuffle=True)
+def get_train_dl(options,config, hparams):
+    loaders, mean, std = get_dataloaders(options,config, hparams, shuffle=True)
     train_dl = loaders.train
     return train_dl, mean, std
 
@@ -83,7 +84,7 @@ def get_meters(hparams):
 
 
 def train_model(options, hparams, config, logger):
-    train_dl, mean, std = get_train_dl(config, hparams)
+    train_dl, mean, std = get_train_dl(options,config, hparams)
 
     img_channels = hparams['img_channels']
     img_size = hparams['img_size']
@@ -128,6 +129,7 @@ def train_model(options, hparams, config, logger):
     for epoch in range(start_epoch,num_epochs):
         epoch_start_time = time.time()
         epoch_loss_meters.reset()
+        model.on_batch_start()
         for batch_idx, sample in enumerate(train_dl):
             batch_start_time = time.time()
             loss_meters.reset()
@@ -148,15 +150,22 @@ def train_model(options, hparams, config, logger):
 
             num_audio_frames = audio.shape[1]//stride
             limit = min(num_audio_frames, num_video_frames)
-
+            bsize, frames, channels, height, width = video.shape
+            video = video.reshape(bsize*frames,channels,height,width)
+            #if not done the `Resize transform` gets angry that it got 3d images 
+            # while it was assured previously that it will get 2d images
+            video = transforms(video)
+            video = video.reshape(bsize,frames,video.shape[-3],video.shape[-2],video.shape[-1])
             still_image = video[:, -STILL_IMAGE_IDX, :, :, :]
-            still_image = transforms(still_image)
+            # still_image = transforms(still_image)
             model.set_condition(still_image)
             
             for idx in range(limit):
                 video_frame = video[:, idx, ...]  # ellipsis
+                # show_img(video_frame)
+                # return
                 audio_frame, _ = get_framewise_audio(idx)
-                video_frame = transforms(video_frame)
+                # video_frame = transforms(video_frame)
 
                 model.set_input(audio_frame, video_frame)
                 losses = model.optimize_parameters()
@@ -164,7 +173,7 @@ def train_model(options, hparams, config, logger):
                 loss_meters.update(losses, n=1)
                 steps += 1
 
-            losses = model.optimize_sequence()
+            losses = model.optimize_sequence(video[:,:limit,...])
             gen_loss = losses.pop('gen', 0)
             loss_meters.update(losses, n=1)
             loss_meters.get('gen').add(gen_loss)

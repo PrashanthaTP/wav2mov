@@ -82,6 +82,6 @@ class ProgressMeter:
     
     def _get_epoch_fmt_str(self,num_epochs):
         num_digits = len(str(num_epochs//1))
-        fmt = '{:' + str(num_digits) + 'd}/'
-        return '[' + fmt + fmt.format(num_epochs) + ']'
+        fmt = '{:' + str(num_digits) + 'd}'
+        return '[' + fmt +'/'+ fmt.format(num_epochs) + ']'
     

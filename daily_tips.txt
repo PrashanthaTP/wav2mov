@@ -117,3 +117,5 @@ March 28
 ==========================================================
 March 30 Tuesday
 making lambda zero for l1 loss makes images black
+==========================================================
+March 31 Tuesday

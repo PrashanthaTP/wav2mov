@@ -12,21 +12,28 @@ DataloadersPack = namedtuple('dataloaders',('train','val'))
 
 TO_Grayscale = vtransforms.Grayscale(1)
 
-def get_dataloaders(config,params,shuffle=True,get_mean_std=True):
+def pack_data():
+    pass
+
+def get_dataloaders(options,config,params,shuffle=True,get_mean_std=True,collate_fn=None):
     hparams = params['data']
     root_dir = config['train_test_dataset_dir']
     filenames_txt = config['filenames_txt']
-    batch_size = hparams['batch_size']
+    batch_size = hparams['mini_batch_size']
     video_fps = hparams['video_fps']
     audio_sf = hparams["audio_sf"]
-    dataset = AudioVideoDataset(root_dir=root_dir,filenames_text_filepath=filenames_txt,audio_sf=audio_sf,video_fps=video_fps)
+    dataset = AudioVideoDataset(root_dir=root_dir,
+                                filenames_text_filepath=filenames_txt,
+                                audio_sf=audio_sf,
+                                video_fps=video_fps,
+                                num_videos=options.num_videos)
     N = len(dataset)
-    print(f'total videos : {N}')
+    # print(f'total videos : {N}')
     train_sz = (N*9)//10
     test_sz = N-train_sz
     train_ds , test_ds = random_split(dataset,[train_sz,test_sz])
     train_dl = DataLoader(train_ds,batch_size=batch_size,shuffle=shuffle,pin_memory=True)
-    test_dl = DataLoader(test_ds,batch_size=batch_size,shuffle=shuffle)
+    test_dl = DataLoader(test_ds,batch_size=batch_size,shuffle=shuffle,collate_fn=collate_fn)
     
     if not all(hparams.get(item,None) for item in ('mean','std')):
         mean,std = get_mean_and_std(train_dl,params['img_channels'],'video')

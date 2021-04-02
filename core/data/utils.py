@@ -11,6 +11,10 @@ import librosa
 import imutils  # for image resizing
 from imutils import face_utils
 
+from collections import namedtuple
+Sample = namedtuple('Sample', ['audio', 'video'])
+
+
 def get_video_frames(video_path,img_size):
     try:
         cap = cv2.VideoCapture(str(video_path))

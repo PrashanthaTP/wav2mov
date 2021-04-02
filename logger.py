@@ -42,7 +42,7 @@ class Logger:
 
     @classmethod
     def __get_formatter(cls, fmt: str):
-        return logging.Formatter(fmt)
+        return logging.Formatter(fmt,"%b %d,%Y %H:%M:%S")
 
     def add_filehandler(self, log_fullpath, fmt:str=None):
         self.log_fullpath = log_fullpath

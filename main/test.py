@@ -8,7 +8,7 @@ from torchvision import transforms as vtransforms
 from torchvision import utils as vutils
 
 from wav2mov.models.generator import GeneratorBW
-from wav2mov.models.wav2mov_2 import Wav2MovBW
+from wav2mov.models.wav2mov_v2 import Wav2MovBW
 from wav2mov.main.data import get_dataloaders
 from wav2mov.utils.audio import StridedAudio
 from wav2mov.utils.plots import show_img,save_gif
@@ -21,13 +21,13 @@ from wav2mov.utils.plots import show_img,save_gif
 
 def test_model(options,hparams, config, logger):
     checkpoint = options.model_path
-    loaders,mean,std= get_dataloaders(config, hparams, shuffle=True)
-    # val_dl = loaders.val
-    # for i in range(25):
-    #     sample = next(iter(val_dl))
-    #     sample = next(iter(val_dl))
+    loaders,mean,std= get_dataloaders(options,config, hparams, shuffle=True)
+    val_dl = loaders.val
+    for i in range(25):
+        sample = next(iter(val_dl))
+        sample = next(iter(val_dl))
     
-    sample = next(iter(loaders.val))
+    # sample = next(iter(loaders.val))
         
     stride = hparams['data']['audio_sf']//hparams['data']['video_fps']
     num_channels = hparams['img_channels']
@@ -112,6 +112,7 @@ def test_model(options,hparams, config, logger):
     save_gif(os.path.join(out_dir,gif_name_fake),fake_frames,duration=1/video_fps)
     save_gif(os.path.join(out_dir,gif_name_real),real_frames,duration=1/video_fps)
     
+    logger.debug(f'GIFs are saved in {out_dir}')
     vutils.save_image((still_image*std+mean)*255, os.path.join(out_dir,'still_frame.png'),normalize=True)
     vutils.save_image(fake_frames,
                       os.path.join(out_dir,f'test_fake_frames_{version}.png'),normalize=True)#if normalize option is not given output will be white boxes 

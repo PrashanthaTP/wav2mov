@@ -47,6 +47,17 @@ class Params:
        
         return self.vals[item]
 
+    def __repr__(self):
+        fstr = ''
+        for key,val in self.vals.items():
+            fstr += f"{key} : {val}\n"
+        return fstr
+    
+    def set(self,key,val):
+        if key in self.vals:
+            logger.warning(f'updating existing value of {key} with value {self.vals[key] } to {val}')
+        self.vals[key] = val
+        
     def save(self,file_fullpath):
         with open(file_fullpath,'w') as file:
             json.dump(self.vals,file)

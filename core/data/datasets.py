@@ -6,13 +6,19 @@ from torch.utils.data import Dataset
 from collections import namedtuple
 from wav2mov.core.utils.audio import AudioUtil
 
-Sample = namedtuple('Sample',['audio','video'])
+from wav2mov.core.data.utils import Sample
+
 
 # TODO : using MFCCS
 class AudioVideoDataset(Dataset):
     """Dataset Class for the numpy file containing mouth landamarks and corresponding audio frames.
     """
-    def __init__(self,root_dir,filenames_text_filepath,audio_sf,video_fps,transform=None):
+    def __init__(self,root_dir,
+                 filenames_text_filepath,
+                 audio_sf,
+                 video_fps,
+                 num_videos,
+                 transform=None):
         self.root_dir = root_dir
         self.audio_fs = audio_sf
         self.video_fps = video_fps
@@ -21,7 +27,8 @@ class AudioVideoDataset(Dataset):
         self.filenames = []
         with open(filenames_text_filepath,'r') as file: 
             self.filenames = file.read().split('\n')
-        # self.filenames = self.filenames[:100]
+        self.filenames = self.filenames[:num_videos]
+        
     def __len__(self):
         return len(self.filenames)
     

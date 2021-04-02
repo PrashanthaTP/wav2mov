@@ -14,11 +14,11 @@ from wav2mov.config import config
 from wav2mov.params import params
 
 from wav2mov.main.preprocess import create_from_grid_dataset
-from wav2mov.main.train_v4 import train_model
+from wav2mov.main.train_v3 import train_model
 from wav2mov.main.test import test_model
 
-from wav2mov.main.options import Options
-
+from wav2mov.main.options import Options,set_options
+from wav2mov.main.validate_params import check_batchsize
 torch.manual_seed(params['seed'])
 
 def get_logger(filehandler_required=False):
@@ -28,6 +28,8 @@ def get_logger(filehandler_required=False):
         local_logger.add_filehandler(config['log_fullpath'])
     return local_logger
 
+
+    
 def preprocess(preprocess_logger):
     create_from_grid_dataset(config,preprocess_logger)
 
@@ -45,10 +47,11 @@ def save_message(options):
     with open(path,'a+') as file:
         file.write(options.msg)
         file.write('\n')
-    
+        
+
 if __name__ == '__main__':
     options = Options().parse()
-    
+    set_options(options,params)
     if options.log in ['y','yes']:
         logger = get_logger(filehandler_required=True)
     else:
@@ -60,10 +63,11 @@ if __name__ == '__main__':
             preprocess(logger)
         
         if options.train in allowed:
-            required = ('num_videos',)
+            required = ('num_videos','num_epochs')
       
             if not all(getattr(options,option) for option in required):
                 raise RuntimeError('Cannot train without the options :',required)
+            check_batchsize(hparams=params['data'])
             train(logger,options)
             
         if options.test in allowed:
@@ -74,4 +78,5 @@ if __name__ == '__main__':
             test(logger,options)
             
     except Exception as e: 
+        params.save(config['params_checkpoint_fullpath'])
         logger.exception(e)

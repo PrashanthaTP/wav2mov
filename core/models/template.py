@@ -11,6 +11,8 @@ class TemplateModel(nn.Module):
         pass
     def on_epoch_start(self,*args,**kwargs):
         pass
+    def on_batch_start(self,*args,**kwargs):
+        pass
     def setup_input(self,*args,**kwargs):
         pass
     def optimize_parameters(self,*args,**kwargs):

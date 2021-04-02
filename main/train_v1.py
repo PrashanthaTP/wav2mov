@@ -5,7 +5,7 @@ import time
 import torch
 from torchvision import transforms as vtransforms
 
-from wav2mov.models.wav2mov_model import Wav2MovBW
+from wav2mov.models.wav2mov_v1 import Wav2MovBW
 from wav2mov.main.data import get_dataloaders
 from wav2mov.utils.audio import StridedAudio
 from wav2mov.utils.misc import AverageMetersList,ProgressMeter

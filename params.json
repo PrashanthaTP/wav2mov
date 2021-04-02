@@ -1,7 +1,7 @@
 {	
 	
     "seed":10,
-    "device":"cpu",
+    "device":"cuda",
     "img_size":256,
     "num_epochs":4,
 	"img_channels":1,
@@ -10,6 +10,7 @@
 		"audio_sf": 16000,
 		"video_fps": 24,
 		"batch_size": 1,
+		"mini_batch_size":1,
 		"mean":0.516,
 		"std":0.236       
 	},
@@ -45,7 +46,7 @@
 		}
 	},
 	"gen": {
-		"device":"cpu",
+		"device":"cuda",
 		"in_channels": 1,
 		"enc_chs": [64, 128, 256, 512, 1024],
 		"dec_chs": [1024, 512, 256, 128, 64],
@@ -62,5 +63,5 @@
 			"lambda_L1":600
 		}
 
-		
+
 }
