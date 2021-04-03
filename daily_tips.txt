@@ -119,3 +119,22 @@ March 30 Tuesday
 making lambda zero for l1 loss makes images black
 ==========================================================
 March 31 Tuesday
+
+==========================================================
+April 1
+backprop problem
+
+==========================================================
+April 2
+fake frames accumulated were not being cleared for each video input
+single grad scaler
+==========================================================
+April 3
+* improve id disc
+* sync => change input to sequence
+* batch =>minibatch : batch_size=4 mini_batch_size=1
+* l1_loss => half image
+
+==========================================================
+March 31 Tuesday
+

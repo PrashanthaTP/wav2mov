@@ -57,10 +57,10 @@
 	},
 
 	"scales":{
-			"lambda_seq_disc":0.6,
-			"lambda_sync_disc":0.9,
-			"lambda_id_disc":1,
-			"lambda_L1":600
+			"lambda_seq_disc":0.2,
+			"lambda_sync_disc":0.8,
+			"lambda_id_disc":2,
+			"lambda_L1":1000
 		}
 
 

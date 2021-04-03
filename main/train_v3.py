@@ -129,8 +129,8 @@ def train_model(options, hparams, config, logger):
     for epoch in range(start_epoch,num_epochs):
         epoch_start_time = time.time()
         epoch_loss_meters.reset()
-        model.on_batch_start()
         for batch_idx, sample in enumerate(train_dl):
+            model.on_batch_start()
             batch_start_time = time.time()
             loss_meters.reset()
 

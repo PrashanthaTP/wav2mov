@@ -23,11 +23,11 @@ def test_model(options,hparams, config, logger):
     checkpoint = options.model_path
     loaders,mean,std= get_dataloaders(options,config, hparams, shuffle=True)
     val_dl = loaders.val
-    for i in range(25):
-        sample = next(iter(val_dl))
-        sample = next(iter(val_dl))
+    # for i in range(25):
+    #     sample = next(iter(val_dl))
+    #     sample = next(iter(val_dl))
     
-    # sample = next(iter(loaders.val))
+    sample = next(iter(loaders.val))
         
     stride = hparams['data']['audio_sf']//hparams['data']['video_fps']
     num_channels = hparams['img_channels']
