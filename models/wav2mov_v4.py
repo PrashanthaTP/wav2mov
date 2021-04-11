@@ -1,3 +1,13 @@
+"""Wav2Mov Model Version 1
++ id disc : Patch GAN : [input] : generated/real video frame conditioned on original still image
++ sync disc : [input] : audio frame and corresponding generated/real video frame
++ sequence disc : [input] : 20 consecutive generated/real video frames 
++  Training : 
+    + use of 4 GradScalers
+    + support grad accumulation :[see variable `self.accumulation_steps`]
++ Results : 
+    + 
+"""
 import os
 import random
 

@@ -1,4 +1,13 @@
-# import math
+"""Wav2Mov Model Version 1
++ id disc : [input] : generated/real video frame conditioned on original still image
++ sync disc : [input] : audio frame and corresponding generated/real video frame
++ sequence disc : [input] : two consecutive generated/real video frames 
++  Training : 
+    + all entities are update simultaneously
+    + use of single GradScaler
++ Results : 
+    + identity is preserved but all frames are same i.e no variation in lips
+"""
 import torch
 from torch import nn
 

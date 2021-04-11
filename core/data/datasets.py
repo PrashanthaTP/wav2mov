@@ -51,7 +51,11 @@ class AudioVideoDataset(Dataset):
     def __getitem__(self,idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
+            
         audio = self.get_audio(idx)
+        
+        # audio = audio.reshape(1,audio.shape[0])
+    
         # audio = self.__frame_wise_split(audio)
         video = self.get_video_frames(idx)
         sample = Sample(torch.from_numpy(audio).float(),torch.from_numpy(video).float())

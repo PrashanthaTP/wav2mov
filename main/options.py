@@ -5,6 +5,11 @@ class Options():
         self.parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                               description='Wav2Mov | End to End Speech to facial animation model')
         
+        self.parser.add_argument('--version',
+                                type=str,
+                                help='version of the file being run. Example : v1,v2,...',
+                                required=True)
+        
         self.parser.add_argument('--log',
                                  default='y',
                                 choices=['y','n','yes','no'],

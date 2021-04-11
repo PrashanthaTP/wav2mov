@@ -20,8 +20,7 @@ def get_tensor_logger(options, config):
 def add_to_board(tensor_logger, losses, global_step, scalar_type):
     for name, value in losses.items():
         writer_name = 'writer_' + name
-        tensor_logger.add_scalar(
-            writer_name, scalar_type+'_'+name, value, global_step)
+        tensor_logger.add_scalar(writer_name, scalar_type+'_'+name, value, global_step)
 
 
 def add_img_grid(tensor_logger, img_grid, global_step, img_type):
@@ -62,6 +61,18 @@ def get_meters(hparams,num_batches):
     batch_loss_meters = AverageMetersList(('id_disc', 'sync_disc', 'seq_disc', 'gen'),
                                           fmt=':0.4f')  # per video
     epoch_loss_meters = AverageMetersList(('id_disc', 'sync_disc', 'seq_disc', 'gen'),
+                                          fmt=':0.4f')  # per epoch
+
+    epoch_progress_meter = ProgressMeter(num_epochs, epoch_loss_meters.as_list(),prefix='[EPOCH]')
+    batch_progress_meter = ProgressMeter(num_batches, batch_loss_meters.as_list(),prefix='[BATCH]')
+
+    return batch_loss_meters, epoch_loss_meters, epoch_progress_meter,batch_progress_meter
+
+def get_meters_v2(hparams,num_batches):
+    num_epochs = hparams['num_epochs']
+    batch_loss_meters = AverageMetersList(('id_disc', 'sync_disc', 'seq_disc', 'gen','l1'),
+                                          fmt=':0.4f')  # per video
+    epoch_loss_meters = AverageMetersList(('id_disc', 'sync_disc', 'seq_disc', 'gen','l1'),
                                           fmt=':0.4f')  # per epoch
 
     epoch_progress_meter = ProgressMeter(num_epochs, epoch_loss_meters.as_list(),prefix='[EPOCH]')

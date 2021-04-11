@@ -1,3 +1,14 @@
+"""Wav2Mov Model Version 1
++ id disc : Patch GAN : [input] : generated/real video frame conditioned on original still image
++ sync disc : [input] : audio frame and corresponding generated/real video frame
++ sequence disc : [input] : 20 consecutive generated/real video frames 
++  Training : 
+    + optimization in terms of how real frames are passed to seq disc
+    + seq disc gets updated after all the frames of a video
+    + use of 4 GradScalers
++ Results : 
+    + 
+"""
 import os
 import random
 

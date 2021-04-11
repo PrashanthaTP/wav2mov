@@ -1,4 +1,17 @@
-# import math
+"""Wav2Mov Model Version 1
++ id disc : Patch disc : [input] : generated/real video frame conditioned on original still image
++ sync disc : [input] : audio frame and corresponding generated/real video frame
++ sequence disc : [input] : 20 consecutive generated/real video frames 
++  [Training] : 
+    + seq disc is update after id and sync discs are trained on whole video
+    + use of single GradScaler
++ [Results] : 
+    + identity is preserved but all frames are same i.e no variation in lips
+    
++ [BUG]
+    + fake frames which were being fed to seq disc were not being cleared for next iteration
+
+"""
 import os
 import random
 
