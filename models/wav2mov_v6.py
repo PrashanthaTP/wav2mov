@@ -241,7 +241,9 @@ class Wav2MovBW(TemplateModel):
         return losses
 
     def on_epoch_end(self, epoch):
-        self.scheduler_step()
+        if epoch <= self.hparams['scheduler']['max_epoch']:
+            self.scheduler_step()
+
         
     def batch_descent(self):
         self.step()
