@@ -23,11 +23,11 @@ def test_model(options,hparams, config, logger):
     checkpoint = options.model_path
     loaders,mean,std= get_dataloaders(options,config, hparams, shuffle=True)
     val_dl = loaders.val
-    # for i in range(25):
-    #     sample = next(iter(val_dl))
-    #     sample = next(iter(val_dl))
+    for _ in range(25):
+        sample = next(iter(val_dl))
+        sample = next(iter(val_dl))
     
-    sample = next(iter(loaders.val))
+    # sample = next(iter(loaders.val))
         
     stride = hparams['data']['audio_sf']//hparams['data']['video_fps']
     num_channels = hparams['img_channels']
@@ -47,7 +47,7 @@ def test_model(options,hparams, config, logger):
 
 
     model = GeneratorBW(hparams=hparams['gen'])
-    checkpoint = torch.load(checkpoint)
+    checkpoint = torch.load(checkpoint, map_location=torch.device('cpu'))
     if 'state_dict' in checkpoint:
         model.load_state_dict(checkpoint['state_dict'])
     else:
@@ -101,16 +101,16 @@ def test_model(options,hparams, config, logger):
     real_frames = torch.cat(real_frames,dim=0)
 
     logger.info(f'fake_frames shape : {fake_frames.shape}')
-    version = os.path.basename(options.model_path).strip('gen').split('.')[0]
+    version = os.path.basename(options.model_path).strip('gen_').split('.')[0]
     
     
     out_dir  = os.path.join(config['out_dir'],version)
     os.makedirs(out_dir,exist_ok=True)
-    gif_name_fake = f'fake_frames_{version}.gif'
-    gif_name_real = f'real_frames_{version}.gif'
-    video_fps = hparams['data']['video_fps']
-    save_gif(os.path.join(out_dir,gif_name_fake),fake_frames,duration=1/video_fps)
-    save_gif(os.path.join(out_dir,gif_name_real),real_frames,duration=1/video_fps)
+    # gif_name_fake = f'fake_frames_{version}.gif'
+    # gif_name_real = f'real_frames_{version}.gif'
+    # video_fps = hparams['data']['video_fps']
+    # save_gif(os.path.join(out_dir,gif_name_fake),fake_frames,duration=1/video_fps)
+    # save_gif(os.path.join(out_dir,gif_name_real),real_frames,duration=1/video_fps)
     
     logger.debug(f'GIFs are saved in {out_dir}')
     vutils.save_image((still_image*std+mean)*255, os.path.join(out_dir,'still_frame.png'),normalize=True)

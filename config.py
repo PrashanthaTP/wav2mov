@@ -1,6 +1,7 @@
 """Config"""
 import json
 import os
+import re
 import logging 
 from datetime import datetime
 
@@ -16,16 +17,17 @@ def get_curr_run_str():
     return 'Run_{}_{}_{}__{}_{}'.format(day,month,year,hour,minutes)
 
 class Config :
-    def __init__(self):
+    def __init__(self,v):
         self.vals = {'base_dir':BASE_DIR}
         self.version = get_curr_run_str()
         #these two are used to decide whether to create a path using os.makedirs
         self.fixed_paths = set()
         self.runtime_paths = set()
-     
+        self.v = v
     def _rectify_paths(self,val):
         return val % {'base_dir': self.vals['base_dir'],
                       'version': self.version,
+                      'v':self.v,
                       'checkpoint_filename': 'checkpoint_'+self.version,
                       'log_filename': 'log_' + self.version
                       }
@@ -58,26 +60,38 @@ class Config :
             self.vals[key] = value
             
     @classmethod
-    def from_json(cls,json_file_fullpath):
+    def from_json(cls,json_file_fullpath,v):
         with open(json_file_fullpath,'r') as file:
             configs = json.load(file)
-            obj = cls()
+            obj = cls(v)
             obj._update_vals_from_dict(configs)
             return obj
     
     def __getitem__(self,item):
         if item not in self.vals:
             logger.error(f'{self.__class__.__name__}  object has no key called {item}')
-            raise KeyError('No key called ',item)
+            raise KeyError('No key called ', item)
         if item in self.fixed_paths:
             return self.vals[item]
+        # self.vals[item] =  re.sub(r'(\\)+', os.sep, self.vals[item])
         if 'fullpath' in item or 'dir' in item:
             path = os.path.dirname(self.vals[item]) if '.' in os.path.basename(self.vals[item]) else self.vals[item]
+            # print('[config]',item ,':',path)
+            # print(os.path.dirname(self.vals[item]))
+            # path = re.sub(r'(\\)+', os.sep, path)
+            if os.sep != '\\':
+              path = re.sub(r'(\\)+', os.sep, path)
             os.makedirs(path,exist_ok=True)
-            logger.debug(f'directory created/accessed : {path}')
+            # print(f'created : {path}')
+            # print(item,self.vals[item],os.path.isdir(path))
+            # logger.debug(f'directory created/accessed : {path}')
+        logger.debug(f'accessing {self.vals[item]}')
+      
         return self.vals[item]
-
     
-config = Config.from_json(os.path.join(BASE_DIR,'config.json'))
+
+def get_config(v):
+    config = Config.from_json(os.path.join(BASE_DIR,'config.json'),v)
+    return config
 if __name__=='__main__':
     pass

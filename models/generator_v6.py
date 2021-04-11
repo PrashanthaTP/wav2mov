@@ -64,6 +64,13 @@ class Encoder(nn.Module):
             >>> torch.Size([1, 256, 136, 136])
             >>> torch.Size([1, 512, 64, 64])
             >>> torch.Size([1, 1024, 28, 28])
+            
+            for input image of shape 256,256
+            torch.Size([1, 64, 252, 252])
+            torch.Size([1, 128, 122, 122])
+            torch.Size([1, 256, 57, 57])  
+            torch.Size([1, 512, 24, 24])  
+            torch.Size([1, 1024, 8, 8])   
     """
 
     def __init__(self, chs=(3, 64, 128, 256, 512, 1024)):
@@ -119,6 +126,8 @@ class Decoder(nn.Module):
         >>> cat torch.Size([1, 1024, 56, 56]) #cat(up,conv)
         """
         for i in range(len(self.up_chs)-1):
+            #len-1 because conv(in,out) are in pairs
+            # so if there are 4 chs then there are 3 conv blocks
             x = self.upconvs[i](x)
             # print('inside decoder unet ',x.shape,encoded_features[i].shape)
             # torch.Size([1, 512, 16, 16]) torch.Size([1, 512, 24, 24])
@@ -168,7 +177,8 @@ class Generator(BaseModel):
         init_net(self.encoder)
         init_net(self.decoder)
         
-        self.head = nn.Sequential(nn.Conv2d(dec_chs[-1], self.hparams['in_channels'], 1),nn.Tanh())  # ((388-3)/1)+1 = 385
+        self.head = nn.Sequential(nn.Conv2d(dec_chs[-1], self.hparams['in_channels'], 1),
+                                  nn.Tanh())  # ((388-3)/1)+1 = 385
 
     def forward(self, frame_img, audio_noise):
         enc_filters = self.encoder(frame_img)
@@ -194,31 +204,33 @@ class AudioEnocoder(nn.Module):
 
     def __init__(self):
         super().__init__()
+        use_bias = True
+        #audio = 666*5=3330
         self.conv = nn.Sequential(
-            nn.Conv1d(1, 64, 3, 3),  # ((666-3)/3)+1 = 663/3 +1 = 222
+            nn.Conv1d(1, 64, 330, 30,bias=use_bias),#input 666 output (3330-330+0)/30 + 1 = 101
             nn.InstanceNorm1d(64),
             nn.ReLU(),
-            nn.Conv1d(64, 1, 3, 3),  # ((222-3)/3)+1 = 219/3+1 = 73+1 = 74
-            nn.InstanceNorm1d(1),
+            nn.Conv1d(64, 128, 3, 1,bias=use_bias),#((101-3+0)/1)+1 =98
+            nn.InstanceNorm1d(128),
             nn.ReLU(),
-            # nn.Conv1d(128,256,4,1),#(74-4)/1 +1 = 71
-            # nn.ReLU(),
-            # nn.Conv1d(256,512,4,1),#(71-4)/1+1 = 68
-            # nn.ReLU(),
-            # nn.Conv1d(512,1,5,1),#(68-5)/1+1 = 64
-            # nn.ReLU()
-        )
-        self.fc = nn.Sequential(nn.Linear(74, 128), nn.ReLU(),
-                                nn.Linear(128, 64), nn.ReLU())
+            nn.Conv1d(128, 256,4,2,1),#((98-4+2)/2)+1 = 48 +1 = 49
+            nn.ReLU(),
+        
+        
+            )
+        self.audio_fc = nn.Sequential(nn.Linear(49*256,5*256),
+                                      nn.ReLU(),
+                                      nn.Linear(5*256,64),
+                                      nn.ReLU())
 
     def forward(self, x):
         # print(x.shape) 
         x = x.reshape(x.shape[0], 1, -1)
         x = self.conv(x)
         # print(x.shape) #=> (1,1,74)
-        x = self.fc(x.reshape(x.shape[0], -1))
+        x = self.audio_fc(x.reshape(x.shape[0], -1))
   
-        return x  # shape (batch_size,28*28)
+        return x  # shape (batch_size,8*8)
 
 
 class NoiseGenerator(nn.Module):

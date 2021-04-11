@@ -136,5 +136,15 @@ April 3
 * l1_loss => half image
 
 ==========================================================
-March 31 Tuesday
+April 5 Monday
 
++ Using only id produces : all same frames but identity is preserved
++ using (id+seq) : upper half of face repeated : less quality even with reduced value of lambda for seq disc
+"only id discs patch gan with lambda 2 and l1 lambda 1200 " dont work
+=======================================================
+
+April 11 sunday
+
++ with learning rate decay of 2% and 10% every 10 epochs does not produce face images even after training around 150 epochs
+maybe because of too low learning rate at that range of epochs (initially lr = 1e-4 after 100 epochs 0.0001*(0.1^1))
+ so have to change the decay to take place every 20 epochs and till 100 epochs only

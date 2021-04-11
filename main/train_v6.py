@@ -1,14 +1,14 @@
 """ Training script : can start from previous checkpoint"""
 
 import time
-import torch
+from torch._C import device
 
 
-from wav2mov.models.wav2mov_v5 import Wav2MovBW
-from wav2mov.utils.audio import StridedAudio
+from wav2mov.models.wav2mov_v6 import Wav2MovBW
+from wav2mov.utils.audio import StridedAudio,StridedAudioV2
 
 from wav2mov.main.utils import (
-                        get_meters,
+                        get_meters_v2 as get_meters,
                         get_device,
                         get_transforms,
                         get_train_dl,
@@ -19,41 +19,51 @@ DISPLAY_EVERY = 5
 STILL_IMAGE_IDX = 5
 
 
-def process_sample(sample,hparams):
+def process_audio(audio,hparams):
+    stride = hparams['data']['audio_sf']//hparams['data']['video_fps']
+    # total len : (666+666)+666+(666+666)
+    strided_audio = StridedAudioV2(stride=stride, 
+                                   coarticulation_factor=hparams['data']['coarticulation_factor'],
+                                   device=hparams['device'])
+    get_frames_from_idx, get_frames_from_range = strided_audio.get_frame_wrapper(audio)
+    return get_frames_from_idx,get_frames_from_range
+
+def process_video(video,hparams):
 
     img_channels = hparams['img_channels']
     img_size = hparams['img_size']
     transforms = get_transforms((img_size, img_size), img_channels)
-
-    stride = hparams['data']['audio_sf']//hparams['data']['video_fps']
-    strided_audio = StridedAudio(stride=stride, coarticulation_factor=0)
-    device = get_device(hparams)
-    audio, video = sample  # channel axis is the last one
-
     # channel axis must be after the batch size,frame_count
     #change video shape from (B,F,H,W,C) to (B,F,C,H,W)
-    video = video.permute(0, 1, 4, 2, 3)
+    video = video.permute(0, 1, 4, 2, 3) 
 
-    audio, video = audio.to(device), video.to(device)
     video = video/255  # !important
-    get_framewise_audio = strided_audio.get_frame_wrapper(audio)
-    # video is of shape(batch_size,num_video_frames,channels,H,W)
+    bsize, frames, channels, height, width = video.shape
 
-
-    # video is of shape : (batch_size,num_frames,channels,img_height,img_width)
-    num_video_frames = video.shape[1]
-
-    num_audio_frames = audio.shape[1]//stride
-    limit = min(num_audio_frames, num_video_frames)
-    bsize,frames,channels,height,width = video.shape
-    
-    video = video.reshape(bsize*frames,channels,height,width)
-    #if not done the `Resize transform` gets angry that it got 3d images 
+    video = video.reshape(bsize*frames, channels, height, width)
+    #if not done the `Resize transform` gets angry that it got 3d images
     # while it was assured previously that it will get 2d images
     video = transforms(video)
-    video = video.reshape(bsize,frames,video.shape[-3],video.shape[-2],video.shape[-1])
+    video = video.reshape(bsize, frames, video.shape[-3], video.shape[-2], video.shape[-1])
+    return video 
+
+def process_sample(sample,hparams):
+
+    stride = hparams['data']['audio_sf']//hparams['data']['video_fps']
+    device = get_device(hparams)
+    audio, video = sample 
+  
+    audio, video = audio.to(device), video.to(device)
     
-    return get_framewise_audio,video,limit
+    get_frames_from_idx,get_frames_from_range = process_audio(audio,hparams)
+    video = process_video(video,hparams)
+    
+    num_video_frames = video.shape[1]
+    num_audio_frames = audio.shape[1]//stride
+    limit = min(num_audio_frames, num_video_frames)
+   
+    return get_frames_from_idx,get_frames_from_range,video,limit
+    
 
 def train_model(options, hparams, config, logger):
     train_dl, mean, std = get_train_dl(options,config, hparams)
@@ -105,16 +115,16 @@ def train_model(options, hparams, config, logger):
         for batch_idx, sample in enumerate(train_dl):
             batch_start_time = time.time() 
             
-            get_framewise_audio,video,limit = process_sample(sample,hparams)
+            get_frames_from_idx,get_frames_from_range,video,limit = process_sample(sample,
+                                                                                   hparams)
             still_image = video[:, -STILL_IMAGE_IDX, :, :, :]
 
             model.set_condition(still_image)
             model.on_batch_start()#reset frames history
-            audio_frames = []
+           
             for idx in range(limit):
                 video_frame = video[:, idx, ...]  # ellipsis
-                audio_frame, _ = get_framewise_audio(idx)
-                # audio_frames.append(audio_frame.unsqueeze(0))#imitate batchsize
+                audio_frame = get_frames_from_idx(idx)
                 model.set_input(audio_frame, video_frame)
                 losses = model.optimize_parameters()
                 # losses of num_frames * mini_batch
@@ -122,8 +132,8 @@ def train_model(options, hparams, config, logger):
                 
             steps += 1
             # losses = model.optimize_sequence(real_frames=video[:,:limit,...],
-            #                                  audio_frames=torch.cat(audio_frames,dim=1))
-            audio_frames = None
+            #                                  get_audio_frames_from_range=get_frames_from_range)
+     
             batch_duration += time.time() -batch_start_time
 
             # losses of mini_batch
@@ -149,7 +159,7 @@ def train_model(options, hparams, config, logger):
             if (batch_idx+1) % 5 == 0:
                 model.save(epoch=epoch)
                 logger.debug(f'model saved in {config["gen_checkpoint_fullpath"]}')
-
+        model.on_epoch_end(epoch=epoch)
         logger.info(epoch_progress_meter.get_display_str(epoch+1))
         model.save(epoch=epoch)
         logger.debug(f'model saved in {config["gen_checkpoint_fullpath"]}')
@@ -164,8 +174,8 @@ def train_model(options, hparams, config, logger):
     end_time = time.time()
     total_train_time = end_time - start_time
     logger.info('Training successfully completed')
-    logger.info(
-        f'Time taken {total_train_time:0.2f} seconds or {total_train_time/60:0.2f} minutes')
+    logger.info(f'Time taken {total_train_time:0.2f} seconds or ' 
+                f'{total_train_time/60:0.2f} minutes')
     logger.info(str(model.to('cpu')))
 
     model_path = config['gen_checkpoint_fullpath']
