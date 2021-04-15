@@ -77,7 +77,7 @@ this will produce noisy images , lambda 2 for id does not work
 =========================================================================================
 March 22 Monday
 =========================================================================================
- X
+
 Plan:
 	+ finding the effect of batchnormalization in sync discriminator
 	+ finding the effect of presence of leaky version of relu activation function
@@ -148,3 +148,11 @@ April 11 sunday
 + with learning rate decay of 2% and 10% every 10 epochs does not produce face images even after training around 150 epochs
 maybe because of too low learning rate at that range of epochs (initially lr = 1e-4 after 100 epochs 0.0001*(0.1^1))
  so have to change the decay to take place every 20 epochs and till 100 epochs only
+
+#########################################################################
+
+April 13 Tuesday
+
++ learning rate decay of 2 and 10% for gen and descs cannot help models to converge easily with the decay per 10 epochs or even 20 epochs .
+The loss values of both id and sync discs are observed to get saturated at some point as learning rate becomes too small at larger epochs (after 100)
+

@@ -18,3 +18,16 @@ def collate_fn(batch):
     audios = pad_sequence(audios, batch_first=True)
   
     return Sample(audios,videos),Lens(audio_lens,video_lens)
+
+
+WINDOW_LEN = 666
+def collate_batch_limit(batch):
+    videos = [(torch.tensor(sample.video)) for sample in batch]
+    videos,video_lens = list(zip(*videos))
+    
+    audios = [(torch.tensor(sample.audio)) for sample in batch]
+    audios,audio_lens = list(zip(*audios))
+    
+    videos = [video[:min(video_lens[i],audio_lens[i]//WINDOW_LEN),...] for i,video in enumerate(videos)]
+    
+    audios

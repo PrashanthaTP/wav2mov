@@ -12,6 +12,10 @@ import imutils  # for image resizing
 from imutils import face_utils
 
 from collections import namedtuple
+
+from torch.functional import Tensor
+
+
 Sample = namedtuple('Sample', ['audio', 'video'])
 
 
@@ -54,3 +58,25 @@ predictor = dlib.shape_predictor(shape_predictor_path)
 mouth_pos = face_utils.FACIAL_LANDMARKS_IDXS['mouth']
 mouth_start_pos, mouth_end_pos = mouth_pos
 """
+
+
+class AudioUtil:
+    def __init__(self,coarticulation_factor,stride):
+        self.coarticulation_factor = coarticulation_factor
+        self.stride = stride
+
+    def get_frame_from_idx(self,audio,idx):
+        if not isinstance(audio,Tensor):
+            audio = torch.tensor(audio)
+            
+        if len(audio.shape)<2:
+            audio = audio.unsqueeze(0)
+            
+        center_idx = (idx) + (self.coarticulation_factor)
+        start_pos = (center_idx-self.coarticulation_factor)*self.stride
+        end_pos = (center_idx+self.coarticulation_factor+1)*self.stride
+        return audio[:, start_pos:end_pos]
+
+    def get_audio_frames(audio):
+        
+        

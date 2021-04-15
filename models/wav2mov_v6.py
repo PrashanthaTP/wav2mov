@@ -1,5 +1,5 @@
 """
-audio windowing with coarticualtion factor and lr scheduling(new version)
+audio windowing with coarticulation factor and lr scheduling(new version)
 """
 import os
 import random
