@@ -64,6 +64,13 @@ class Encoder(nn.Module):
             >>> torch.Size([1, 256, 136, 136])
             >>> torch.Size([1, 512, 64, 64])
             >>> torch.Size([1, 1024, 28, 28])
+            
+            for input image of shape 256,256
+            torch.Size([1, 64, 252, 252])
+            torch.Size([1, 128, 122, 122])
+            torch.Size([1, 256, 57, 57])  
+            torch.Size([1, 512, 24, 24])  
+            torch.Size([1, 1024, 8, 8])   
     """
 
     def __init__(self, chs=(3, 64, 128, 256, 512, 1024)):
@@ -119,6 +126,8 @@ class Decoder(nn.Module):
         >>> cat torch.Size([1, 1024, 56, 56]) #cat(up,conv)
         """
         for i in range(len(self.up_chs)-1):
+            #len-1 because conv(in,out) are in pairs
+            # so if there are 4 chs then there are 3 conv blocks
             x = self.upconvs[i](x)
             # print('inside decoder unet ',x.shape,encoded_features[i].shape)
             # torch.Size([1, 512, 16, 16]) torch.Size([1, 512, 24, 24])
@@ -168,13 +177,15 @@ class Generator(BaseModel):
         init_net(self.encoder)
         init_net(self.decoder)
         
-        self.head = nn.Sequential(nn.Conv2d(dec_chs[-1], self.hparams['in_channels'], 1),nn.Tanh())  # ((388-3)/1)+1 = 385
+        self.head = nn.Sequential(nn.Conv2d(dec_chs[-1], self.hparams['in_channels'], 1),
+                                  nn.Tanh())  # ((388-3)/1)+1 = 385
 
     def forward(self, frame_img, audio_noise):
         enc_filters = self.encoder(frame_img)
         # channel wise catenation
         # print(audio_noise.shape,enc_filters[::-1][0].shape)
         enc_filters = enc_filters[::-1]
+        # print(f'inside gen {enc_filters[0].shape} {audio_noise.shape} {frame_img.shape}')
         enc_filters[0] = torch.cat([enc_filters[0], audio_noise], dim=1)
         # print(enc_filters[0].shape)
         out = self.decoder(enc_filters[0], enc_filters[1:])
@@ -215,10 +226,10 @@ class AudioEnocoder(nn.Module):
 
     def forward(self, x):
         # print(x.shape) 
-        #pass through cnn and dense layers
         x = x.reshape(x.shape[0], 1, -1)
-        x = self.conv(x).reshape(x.shape[0], -1)
-        x = self.audio_fc(x)
+        x = self.conv(x)
+        # print(x.shape) #=> (1,1,74)
+        x = self.audio_fc(x.reshape(x.shape[0], -1))
   
         return x  # shape (batch_size,8*8)
 
@@ -241,8 +252,8 @@ class NoiseGenerator(nn.Module):
             # nn.ReLU()
         )
 
-    def forward(self):
-        noise = torch.randn(1, 100).to(self.device)
+    def forward(self,total_frames):
+        noise = torch.randn(total_frames, 100).to(self.device)
         return self.fc(noise)  # shape (batch_size,28*28)
 
 
@@ -265,9 +276,10 @@ class GeneratorBW(BaseModel):
         
     def forward(self, audio, frame_img):
         # batch_size = audio.shape[0]
- 
+        # print(f'inside gen forward audio : {audio.shape} frame image : {frame_img.shape}')
+        total_frames = audio.shape[0]
         x = torch.cat([self.audio_enc(audio).reshape(-1, 1, 8, 8),
-                       self.noise_enc().reshape(-1, 1, 8, 8)], dim=1)
+                       self.noise_enc(total_frames).reshape(-1, 1, 8, 8)], dim=1)
         # x = self.audio_enc(audio).reshape(-1,1,8,8)
         return self.identity_enc(frame_img, x)
 

@@ -47,8 +47,7 @@ def get_device(hparams):
     if hparams['device'] == 'cpu':
         device = torch.device('cpu')
     else:
-        device = torch.device(
-            'cuda') if torch.cuda.is_available() else torch.device('cpu')
+        device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     return device
 
 

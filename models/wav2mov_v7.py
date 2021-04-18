@@ -2,7 +2,6 @@
 Supports BATCHING  
 audio windowing with coarticulation factor and lr scheduling(new version)
 """
-from core.data.utils import AudioUtil
 import os
 import random
 
@@ -11,13 +10,14 @@ from torch.cuda import amp
 from torch.optim.lr_scheduler import StepLR
 
 from wav2mov.core.models.template import TemplateModel
-from wav2mov.models.generator_v6 import Generator, GeneratorBW
+from wav2mov.models.generator_v7 import Generator, GeneratorBW
 from wav2mov.models.sequence_discriminator import SequenceDiscriminator, SequenceDiscriminatorCNN
 from wav2mov.models.identity_discriminator import IdentityDiscriminator
 from wav2mov.models.patch_disc import PatchDiscriminator
 from wav2mov.models.sync_discriminator_v7 import SyncDiscriminator
 from wav2mov.models.utils import init_net
 from wav2mov.losses import GANLoss,SyncLoss,L1_Loss
+from wav2mov.core.data.utils import AudioUtil
 
 class Wav2MovBW(TemplateModel):
     def __init__(self, config, hparams, logger):
@@ -105,7 +105,7 @@ class Wav2MovBW(TemplateModel):
     def on_epoch_start(self, epoch):
         self.loss_gen = 0.0
         
-    def on_batch_start(self):
+    def on_batch_start(self,batch_idx):
         self._set_frame_history()
         
     def set_condition(self, still_images):

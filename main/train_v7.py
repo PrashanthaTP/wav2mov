@@ -3,7 +3,8 @@
 import os
 import time
 
-from wav2mov.models.wav2mov_v6 import Wav2MovBW
+from wav2mov.core.engine.engine import BaseEngine
+from wav2mov.models.wav2mov_v7 import Wav2MovBW
 from wav2mov.utils.audio import StridedAudio, StridedAudioV2
 
 from wav2mov.main.utils import (
@@ -66,8 +67,7 @@ def process_sample(sample, hparams):
     limit = min(num_audio_frames, num_video_frames)
 
     return get_frames_from_idx, get_frames_from_range, video, limit
-
-
+   
 def train_model(options, hparams, config, logger):
     train_dl, mean, std = get_train_dl(options, config, hparams)
 
@@ -91,20 +91,16 @@ def train_model(options, hparams, config, logger):
         prev_epoch = model.load(checkpoint_dir=options.model_path)
         if prev_epoch is not None:
             start_epoch = prev_epoch+1
-        logger.debug(
-            f'weights loaded successfully: {config.version} <== {loading_version}')
+        logger.debug(f'weights loaded successfully: {config.version} <== {loading_version}')
 
     ################################
     # Setup loggers and loss meters
     ################################
     tensor_logger = get_tensor_logger(options, config)
-    batch_loss_meters, epoch_loss_meters, epoch_progress_meter, batch_progress_meter = get_meters(
-        hparams, num_batches=num_batches)
+    batch_loss_meters, epoch_loss_meters, epoch_progress_meter, batch_progress_meter = get_meters(hparams, num_batches=num_batches)
 
-    logger.info(
-        f'{STILL_IMAGE_IDX}th frame from last of every video is considered as reference image for the generator')
-    logger.info(
-        f'Training started on {hparams["device"]} with batch_size {hparams["data"]["batch_size"]} ')
+    logger.info(f'{STILL_IMAGE_IDX}th frame from last of every video is considered as reference image for the generator')
+    logger.info(f'Training started on {hparams["device"]} with batch_size {hparams["data"]["batch_size"]} ')
     steps = 0
 
     start_time = time.time()
@@ -123,15 +119,21 @@ def train_model(options, hparams, config, logger):
             batch_start_time = time.time()
 
             audio,audio_frames,video = sample
+            audio = audio.to(hparams['device'])
+            video = video.to(hparams['device'])
+            
+            audio_frames = audio_frames.to(hparams['device'])
             video = process_video(video,hparams)
-            still_image = video[:, -STILL_IMAGE_IDX, :, :, :]
-
-            model.set_condition(still_image)
-            model.on_batch_start()  # reset frames history
-            
-            
             batch_size,num_frames,channels,height,width = video.shape
-            assert(num_frames==[1])
+            
+            still_images= video[:, -STILL_IMAGE_IDX, :, :, :]
+            still_images = still_images.repeat((1,num_frames,1,1,1))
+            still_images = still_images.reshape((batch_size*num_frames,channels,height,width))
+            model.set_condition(still_images)
+            model.on_batch_start(batch_idx)  # reset frames history
+            
+            
+            assert(num_frames==audio_frames.shape[1])
             model.set_input(audio_frames.reshape(batch_size*num_frames,audio.shape[-1]), 
                             video.reshape(batch_size*num_frames,channels,height,width))
             losses = model.optimize_parameters()#optimize id disc
@@ -158,10 +160,8 @@ def train_model(options, hparams, config, logger):
                 epoch_loss_meters.update(
                     batch_loss_meters.average(), n=hparams['data']['batch_size'])
 
-                logger.debug(batch_progress_meter.get_display_str(
-                    (batch_idx+1)//hparams['data']['batch_size']))
-                logger.debug(
-                    f"Batch duration : {batch_duration:0.4f} seconds or {batch_duration/60:0.4f} minutes")
+                logger.debug(batch_progress_meter.get_display_str((batch_idx+1)//hparams['data']['batch_size']))
+                logger.debug(f"Batch duration : {batch_duration:0.4f} seconds or {batch_duration/60:0.4f} minutes")
 
                 batch_loss_meters.reset()
                 batch_duration = 0.0
