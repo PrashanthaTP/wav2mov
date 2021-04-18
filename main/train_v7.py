@@ -46,8 +46,7 @@ def process_video(video, hparams):
     #if not done the `Resize transform` gets angry that it got 3d images
     # while it was assured previously that it will get 2d images
     video = transforms(video)
-    video = video.reshape(
-        bsize, frames, video.shape[-3], video.shape[-2], video.shape[-1])
+    video = video.reshape(bsize, frames, video.shape[-3], video.shape[-2], video.shape[-1])
     return video
 
 
@@ -123,32 +122,30 @@ def train_model(options, hparams, config, logger):
         for batch_idx, sample in enumerate(train_dl):
             batch_start_time = time.time()
 
-            get_frames_from_idx, get_frames_from_range, video, limit = process_sample(sample,
-                                                                                      hparams)
+            audio,audio_frames,video = sample
+            video = process_video(video,hparams)
             still_image = video[:, -STILL_IMAGE_IDX, :, :, :]
 
             model.set_condition(still_image)
             model.on_batch_start()  # reset frames history
             
             
-            
-            for idx in range(limit):
-                video_frame = video[:, idx, ...]  # ellipsis
-                audio_frame = get_frames_from_idx(idx)
-                model.set_input(audio_frame, video_frame)
-                losses = model.optimize_parameters()
-                # losses of num_frames * mini_batch
-                batch_loss_meters.update(
-                    losses, n=video.shape[0]*video.shape[1])
+            batch_size,num_frames,channels,height,width = video.shape
+            assert(num_frames==[1])
+            model.set_input(audio_frames.reshape(batch_size*num_frames,audio.shape[-1]), 
+                            video.reshape(batch_size*num_frames,channels,height,width))
+            losses = model.optimize_parameters()#optimize id disc
+            # losses of num_frames * mini_batch
+            batch_loss_meters.update(losses, n=video.shape[0]*video.shape[1])
 
-            steps += 1
-            # losses = model.optimize_sequence(real_frames=video[:,:limit,...],
-            #                                  get_audio_frames_from_range=get_frames_from_range)
+            losses = model.optimize_sequence(real_frames=video)#optimize sync and sequence
 
             batch_duration += time.time() - batch_start_time
 
-            # losses of mini_batch
-            # batch_loss_meters.update(losses, n=video.shape[0])
+            # losses of sync and sequence
+            batch_loss_meters.update(losses, n=video.shape[0])
+            
+            steps += 1
 
             if (batch_idx+1) % accumulation_steps == 0:
                 model.batch_descent()

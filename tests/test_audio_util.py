@@ -1,7 +1,9 @@
 import torch 
 import logging
 import unittest
+from wav2mov.core.data.utils import AudioUtil
 from wav2mov.utils.audio import StridedAudioV2
+
 
 
 logger = logging.getLogger(__file__)
@@ -36,5 +38,13 @@ class TestAudioUtil(unittest.TestCase):
                     logging.debug(f'{i},{frame.shape}')
                 self.assertEqual(frame.shape, (1,(num_frames+2)*666))
                 
+    def test_limit_audio(self):
+        COARTICULATION_FACTOR = 2
+        STRIDE = 666
+        audio_util = AudioUtil(COARTICULATION_FACTOR,STRIDE)
+        audio = torch.randn(1,45000)
+        limited_audio =  audio_util.get_limited_audio(audio,5,2)
+        self.assertEqual(limited_audio.shape,(1,5*STRIDE +2*COARTICULATION_FACTOR*STRIDE))
+        
 if __name__ == '__main__':
     unittest.main()

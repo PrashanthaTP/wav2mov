@@ -11,15 +11,10 @@ DataloadersPack = namedtuple('dataloaders',('train','val'))
 
 
 TO_Grayscale = vtransforms.Grayscale(1)
-
-def pack_data():
-    pass
-
-def get_dataloaders(options,config,params,shuffle=True,get_mean_std=True,collate_fn=None):
-    hparams = params['data']
+def get_dataset(options,config,hparams):
+    hparams = hparams['data']
     root_dir = config['train_test_dataset_dir']
     filenames_txt = config['filenames_txt']
-    batch_size = hparams['mini_batch_size']
     video_fps = hparams['video_fps']
     audio_sf = hparams["audio_sf"]
     dataset = AudioVideoDataset(root_dir=root_dir,
@@ -27,12 +22,18 @@ def get_dataloaders(options,config,params,shuffle=True,get_mean_std=True,collate
                                 audio_sf=audio_sf,
                                 video_fps=video_fps,
                                 num_videos=options.num_videos)
+    return dataset
+
+def get_dataloaders(options,config,params,shuffle=True,get_mean_std=True,collate_fn=None):
+    hparams = params['data']
+    batch_size = hparams['mini_batch_size']
+    dataset = get_dataset(options,config,params)
     N = len(dataset)
     # print(f'total videos : {N}')
     train_sz = (N*9)//10
     test_sz = N-train_sz
     train_ds , test_ds = random_split(dataset,[train_sz,test_sz])
-    train_dl = DataLoader(train_ds,batch_size=batch_size,shuffle=shuffle,pin_memory=True)
+    train_dl = DataLoader(train_ds,batch_size=batch_size,shuffle=shuffle,collate_fn=collate_fn,pin_memory=True)
     test_dl = DataLoader(test_ds,batch_size=batch_size,shuffle=shuffle,collate_fn=collate_fn)
     
     if not all(hparams.get(item,None) for item in ('mean','std')):
@@ -40,7 +41,8 @@ def get_dataloaders(options,config,params,shuffle=True,get_mean_std=True,collate
         hparams['mean'] = [value for value in mean.tolist() ]
         hparams['std'] = [value for value in std.tolist() ]
         params.update('data',hparams)
-    
+    if not get_mean_std:
+        return DataloadersPack(train_dl,test_dl)
     return DataloadersPack(train_dl,test_dl),hparams['mean'],hparams['std']
 
 

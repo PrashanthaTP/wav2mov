@@ -185,6 +185,7 @@ class Generator(BaseModel):
         # channel wise catenation
         # print(audio_noise.shape,enc_filters[::-1][0].shape)
         enc_filters = enc_filters[::-1]
+        # print(f'inside gen {enc_filters[0].shape} {audio_noise.shape} {frame_img.shape}')
         enc_filters[0] = torch.cat([enc_filters[0], audio_noise], dim=1)
         # print(enc_filters[0].shape)
         out = self.decoder(enc_filters[0], enc_filters[1:])
@@ -251,8 +252,8 @@ class NoiseGenerator(nn.Module):
             # nn.ReLU()
         )
 
-    def forward(self):
-        noise = torch.randn(1, 100).to(self.device)
+    def forward(self,total_frames):
+        noise = torch.randn(total_frames, 100).to(self.device)
         return self.fc(noise)  # shape (batch_size,28*28)
 
 
@@ -275,9 +276,10 @@ class GeneratorBW(BaseModel):
         
     def forward(self, audio, frame_img):
         # batch_size = audio.shape[0]
- 
+        # print(f'inside gen forward audio : {audio.shape} frame image : {frame_img.shape}')
+        total_frames = audio.shape[0]
         x = torch.cat([self.audio_enc(audio).reshape(-1, 1, 8, 8),
-                       self.noise_enc().reshape(-1, 1, 8, 8)], dim=1)
+                       self.noise_enc(total_frames).reshape(-1, 1, 8, 8)], dim=1)
         # x = self.audio_enc(audio).reshape(-1,1,8,8)
         return self.identity_enc(frame_img, x)
 

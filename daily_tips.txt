@@ -156,3 +156,6 @@ April 13 Tuesday
 + learning rate decay of 2 and 10% for gen and descs cannot help models to converge easily with the decay per 10 epochs or even 20 epochs .
 The loss values of both id and sync discs are observed to get saturated at some point as learning rate becomes too small at larger epochs (after 100)
 
+#############################################################################################
+
+April 15 Thursday
