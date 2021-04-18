@@ -1,26 +1,9 @@
 import torch
 from torchvision import transforms as vtransforms
 
-from wav2mov.logger import TensorLogger
 from wav2mov.main.data import get_dataloaders
 from wav2mov.utils.misc import AverageMetersList,ProgressMeter
 
-def setup_tensor_logger(config):
-    tensor_logger = TensorLogger(config['runs_dir'])
-    writer_names = ['writer_gen', 'writer_sync_disc',
-                    'writer_seq_disc', 'writer_id_disc']
-    tensor_logger.add_writers(writer_names)
-    return tensor_logger
-
-
-def get_tensor_logger(options, config):
-    return setup_tensor_logger(config) if options.log in ['y', 'yes'] else None
-
-
-def add_to_board(tensor_logger, losses, global_step, scalar_type):
-    for name, value in losses.items():
-        writer_name = 'writer_' + name
-        tensor_logger.add_scalar(writer_name, scalar_type+'_'+name, value, global_step)
 
 
 def add_img_grid(tensor_logger, img_grid, global_step, img_type):
