@@ -106,7 +106,7 @@ class SyncDiscriminator(BaseModel):
 
         """
         batch_size = audio_frames.shape[0]
-        print(f'inside sync forward : audio : {audio_frames.shape} {audio_frames.is_cuda} : video {video_frames.shape} {video_frames.is_cuda}') 
+        # print(f'inside sync forward : audio : {audio_frames.shape} {audio_frames.is_cuda} : video {video_frames.shape} {video_frames.is_cuda}') 
         
         img_height = video_frames.shape[-2]
         video_frames = video_frames[...,img_height//2:,:] #consider only lower half of the image so new height is 256/2 = 128

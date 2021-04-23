@@ -86,6 +86,7 @@ class Wav2MovBW(TemplateModel):
         self.curr_real_audio_frames = None
 
         self.curr_fake_video_frames = None
+        self.curr_audio = None
 
     def __get_stride(self):
         return self.hparams['data']['audio_sf']//self.hparams['data']['video_fps']
@@ -108,21 +109,22 @@ class Wav2MovBW(TemplateModel):
     def on_batch_start(self,batch_idx):
         self._set_frame_history()
         
-    def set_condition(self, still_images):
-        self.still_images = still_images.to(self.device)
-
-    def set_input(self, audio_frames, video_frames):
-        """sets the input required during forward pass of generator and id discriminator
-
-        Args:
-            audio_frame ([tensor]): shape : (batch_size*num_frames,audio_features)
-            video_frame ([tensor]): shape : (batch_size,num_frames,channels,height,width)
-            
-            PS  : the shapes are such that there is a one to one correspondance between video frame and audio frame
+    def set_input(self, still_images, audio,audio_frames, video):
         """
-        self.curr_real_video_frames = video_frames.to(self.device)
+        still_images : (B,F,C,H,W) : (B*F,C,H,W)
+        video : (B,F,C,H,W) : (B*F,C,H,W)
+        audio_frames : (B,F,feat)
+        audio : (B,feat)
+        """
+        batch_size,num_frames,channels,height,width = video.shape
+        self.curr_batch_size = batch_size
+        still_images = still_images.to(self.device)
+        still_images = still_images.repeat((1,num_frames,1,1,1))
+        self.still_images = still_images
+        self.curr_real_video_frames = video.to(self.device)
         self.curr_real_audio_frames = audio_frames.to(self.device)
-
+        self.curr_audio = audio
+        
     def backward_gen(self):
         """requires <curr_fake_frame> to be populated before hand that is during discriminator training
         """
@@ -140,7 +142,8 @@ class Wav2MovBW(TemplateModel):
             ##################################
             # L1 Criterion
             ##################################
-            loss_l1 = self.criterion_L1(self.curr_fake_video_frames,
+            batch_size,frames,channels,height,width = self.curr_real_video_frames.shape
+            loss_l1 = self.criterion_L1(self.curr_fake_video_frames.reshape(batch_size,frames,channels,height,width),
                                           self.curr_real_video_frames)*self.hparams['scales']['lambda_L1']
             loss_ret = {'gen':loss_gen.item(),'l1':loss_l1.item()}
             loss_gen += loss_l1
@@ -261,44 +264,46 @@ class Wav2MovBW(TemplateModel):
     def batch_descent(self):
         self.step()
         
-    def optimize_sequence(self, video,audio):
-        """optimize sync and seq discriminator 
+    def optimize_sequence(self):
+       
 
-        Args:
-            video ([type]): [description]
-            audio ([type]): [description]
-
-        Returns:
-            [type]: [description]
-            
-        The number of frames should be greater than 20
-        """
         ############
         # real_frames has the shape (B,F,C,H,W)
         # make it (B,C,F,H,W) #think of 3d cnn
         #############
-    
-        real_frames = video.permute(0, 2, 1, 3, 4)
+        real_frames = self.curr_real_video_frames.permute(0, 2, 1, 3, 4)
+        batch_size,frames,channels,height,width = real_frames.shape
 
         losses = {}
         OFFSET_SYNC_OUT_OF_SYNC = 15
         NUM_FRAMES_FOR_SYNC = 5
         NUM_FRAMES_ACTUAL = real_frames.shape[2] #num_frames is present in 3rd dimension now.(B,C,F,H,W)
         NUM_FRAMES_REQ_MIN =  OFFSET_SYNC_OUT_OF_SYNC + 2*NUM_FRAMES_FOR_SYNC
+        
         if NUM_FRAMES_ACTUAL < NUM_FRAMES_REQ_MIN: 
              raise ValueError(f'Given video should atleast have {NUM_FRAMES_REQ_MIN} frames. Instead given video has {NUM_FRAMES_ACTUAL} frames')
         randpos = random.randint(0, real_frames.shape[2]-NUM_FRAMES_FOR_SYNC-OFFSET_SYNC_OUT_OF_SYNC)
         
         real_frames = real_frames[..., randpos:randpos+NUM_FRAMES_FOR_SYNC, :, :]
+        
+        self.fake_frames = self.fake_frames.reshape(batch_size,frames,channels,height,width)
         self.fake_frames = self.fake_frames[...,randpos:randpos+NUM_FRAMES_FOR_SYNC, :, :]
         
-        audio_frames = self.audio_util.get_limited_audio(audio,NUM_FRAMES_FOR_SYNC,start_frame=randpos)
-        out_of_sync_audio_frames = self.audio_util.get_limited_audio(audio,NUM_FRAMES_FOR_SYNC,start_frame=randpos+OFFSET_SYNC_OUT_OF_SYNC)
+        audio_frames = self.audio_util.get_limited_audio(self.curr_audio,
+                                                         NUM_FRAMES_FOR_SYNC,
+                                                         start_frame=randpos)
+        
+        out_of_sync_audio_frames = self.audio_util.get_limited_audio(self.curr_audio,
+                                                                     NUM_FRAMES_FOR_SYNC,
+                                                                     start_frame=randpos+OFFSET_SYNC_OUT_OF_SYNC)
 
         # accumulate losses
         # losses['seq_disc'] = self.backward_seq_disc(real_frames)
-        losses['sync_disc'] = self.backward_sync_disc(audio_frames,real_frames,out_of_sync_audio_frames)
-        losses['gen'] = self.backward_gen_seq(audio_frames)
+        # losses['sync_disc'] = self.backward_sync_disc(audio_frames,
+        #                                               real_frames,
+        #                                               out_of_sync_audio_frames)
+        
+        # losses['gen'] = self.backward_gen_seq(audio_frames)
         self._set_frame_history()
         return losses
 

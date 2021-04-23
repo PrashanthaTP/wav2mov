@@ -44,9 +44,25 @@ class PatchDiscriminator(nn.Module):
         self.disc = nn.Sequential(*sequence)
         
     def forward(self,frame_image,still_image):
+        frame_image,still_image = self.reshape_input(frame_image,still_image)
         frame_image = torch.cat([frame_image,still_image],dim=1)#catenate images along the channel dimension
         #frame image now has a shape of (N,C+C,H,W)
+
         return self.disc(frame_image)
     
+    def reshape_input(self,frame_image,still_image):
+       """
+       frame_image : (B,F,C,H,W)
+       still_image : (B,F,C,H,W)
+       """    
+       if len(frame_image.shape)>4:
+           batch_size,frames,channels,height,width = frame_image.shape
+           frame_image = frame_image.reshape(batch_size*frames,channels,height,width)
+       if len(still_image.shape)>4:
+           batch_size,frames,channels,height,width = still_image.shape
+           still_image = still_image.reshape(batch_size*frames,channels,height,width)
+       return frame_image,still_image
+           
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5, 0.999))
+     

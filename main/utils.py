@@ -1,6 +1,7 @@
 import torch
 from torchvision import transforms as vtransforms
 
+from wav2mov.core.data.collates import get_batch_collate
 from wav2mov.logger import TensorLogger
 from wav2mov.main.data import get_dataloaders
 from wav2mov.utils.misc import AverageMetersList,ProgressMeter
@@ -32,6 +33,11 @@ def get_train_dl(options,config, hparams):
     train_dl = loaders.train
     return train_dl, mean, std
 
+def get_train_dl_v2(options,config, hparams):
+    collate_fn =get_batch_collate(hparams['data'])
+    loaders, mean, std = get_dataloaders(options,config, hparams, shuffle=True,collate_fn=collate_fn)
+    train_dl = loaders.train
+    return train_dl, mean, std
 
 def get_transforms(img_size, img_channels):
     transforms = vtransforms.Compose(

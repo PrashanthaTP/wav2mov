@@ -11,24 +11,12 @@ from wav2mov.main.utils import (
     get_meters_v2 as get_meters,
     get_device,
     get_transforms,
-    get_train_dl,
+    get_train_dl_v2 as get_train_dl,
     add_to_board,
     get_tensor_logger)
 
 DISPLAY_EVERY = 5
 STILL_IMAGE_IDX = 5
-
-
-
-def process_audio(audio, hparams):
-    stride = hparams['data']['audio_sf']//hparams['data']['video_fps']
-    # total len : (666+666)+666+(666+666)
-    strided_audio = StridedAudioV2(stride=stride,
-                                   coarticulation_factor=hparams['data']['coarticulation_factor'],
-                                   device=hparams['device'])
-    get_frames_from_idx, get_frames_from_range = strided_audio.get_frame_wrapper(
-        audio)
-    return get_frames_from_idx, get_frames_from_range
 
 
 def process_video(video, hparams):
@@ -53,21 +41,20 @@ def process_video(video, hparams):
 
 def process_sample(sample, hparams):
 
-    stride = hparams['data']['audio_sf']//hparams['data']['video_fps']
     device = get_device(hparams)
-    audio, video = sample
-
-    audio, video = audio.to(device), video.to(device)
-
-    get_frames_from_idx, get_frames_from_range = process_audio(audio, hparams)
-    video = process_video(video, hparams)
-
-    num_video_frames = video.shape[1]
-    num_audio_frames = audio.shape[1]//stride
-    limit = min(num_audio_frames, num_video_frames)
-
-    return get_frames_from_idx, get_frames_from_range, video, limit
-   
+    audio,audio_frames,video = sample
+    audio = audio.to(device)
+    video = video.to(device)
+    audio_frames = audio_frames.to(device)
+    video = process_video(video,hparams)
+    return audio,audio_frames,video
+def get_still_images(video):
+    batch_size,num_frames,channels,height,width = video.shape 
+    still_images= video[:, -STILL_IMAGE_IDX, :, :, :]
+    still_images = still_images.repeat((1,num_frames,1,1,1))
+    still_images = still_images.reshape((batch_size*num_frames,channels,height,width))
+    return still_images
+    
 def train_model(options, hparams, config, logger):
     train_dl, mean, std = get_train_dl(options, config, hparams)
 
@@ -75,10 +62,8 @@ def train_model(options, hparams, config, logger):
     accumulation_steps = hparams['data']['batch_size']//hparams['data']['mini_batch_size']
 
     num_batches = len(train_dl)//accumulation_steps
-    logger.info(
-        'options numm_videos : {options.num_videos},mean :{mean},std :{std}')
-    logger.info(
-        f'train_dl : len(train_dl) :{len(train_dl)} : num_batches: {num_batches}')
+    logger.info(f'options numm_videos : {options.num_videos},mean :{mean},std :{std}')
+    logger.info( f'train_dl : len(train_dl) :{len(train_dl)} : num_batches: {num_batches}')
 
     start_epoch = 0
     model = Wav2MovBW(config, hparams, logger)
@@ -117,30 +102,17 @@ def train_model(options, hparams, config, logger):
         model.on_epoch_start(epoch)
         for batch_idx, sample in enumerate(train_dl):
             batch_start_time = time.time()
-
-            audio,audio_frames,video = sample
-            audio = audio.to(hparams['device'])
-            video = video.to(hparams['device'])
+            audio,audio_frames,video = process_sample(sample,hparams) 
+            still_images = get_still_images(video)
             
-            audio_frames = audio_frames.to(hparams['device'])
-            video = process_video(video,hparams)
-            batch_size,num_frames,channels,height,width = video.shape
-            
-            still_images= video[:, -STILL_IMAGE_IDX, :, :, :]
-            still_images = still_images.repeat((1,num_frames,1,1,1))
-            still_images = still_images.reshape((batch_size*num_frames,channels,height,width))
-            model.set_condition(still_images)
             model.on_batch_start(batch_idx)  # reset frames history
             
-            
-            assert(num_frames==audio_frames.shape[1])
-            model.set_input(audio_frames.reshape(batch_size*num_frames,audio.shape[-1]), 
-                            video.reshape(batch_size*num_frames,channels,height,width))
+            model.set_input(still_images,audio,audio_frames,video)
             losses = model.optimize_parameters()#optimize id disc
             # losses of num_frames * mini_batch
             batch_loss_meters.update(losses, n=video.shape[0]*video.shape[1])
 
-            losses = model.optimize_sequence(real_frames=video)#optimize sync and sequence
+            losses = model.optimize_sequence()#optimize sync and sequence
 
             batch_duration += time.time() - batch_start_time
 

@@ -207,6 +207,8 @@ class AudioEnocoder(nn.Module):
         super().__init__()
         use_bias = True
         #audio = 666*5=3330
+        #if coarticulation factor is 1
+        #666*3 = 1998
         self.conv = nn.Sequential(
             nn.Conv1d(1, 64, 330, 30,bias=use_bias),#input 666 output (3330-330+0)/30 + 1 = 101
             nn.InstanceNorm1d(64),
@@ -277,11 +279,29 @@ class GeneratorBW(BaseModel):
     def forward(self, audio, frame_img):
         # batch_size = audio.shape[0]
         # print(f'inside gen forward audio : {audio.shape} frame image : {frame_img.shape}')
+        print(f'audio {audio.shape} frame {frame_img.shape}')
+        audio,frame_img = self.reshape_input(audio,frame_img)
+        print(f'audio {audio.shape} frame {frame_img.shape}')
         total_frames = audio.shape[0]
         x = torch.cat([self.audio_enc(audio).reshape(-1, 1, 8, 8),
                        self.noise_enc(total_frames).reshape(-1, 1, 8, 8)], dim=1)
         # x = self.audio_enc(audio).reshape(-1,1,8,8)
+        print(f'x {x.shape}')
         return self.identity_enc(frame_img, x)
 
+    def reshape_input(self,audio,frame_img):
+        """reshape the inputs suitable for the network
+
+        Args:
+            audio (Tensor): (B,F,feat)
+            frame_img (Tensor):(B,F,C,H,W) 
+        """
+        if len(audio.shape)>2:
+            batch_size ,frames,features_len = audio.shape
+            audio = audio.reshape(batch_size*frames,features_len)
+        if len(frame_img.shape)>4:
+            batch_size,frames,channels,height,width = frame_img.shape
+            frame_img = frame_img.reshape(batch_size*frames,channels,height,width)
+        return audio,frame_img
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5, 0.999))

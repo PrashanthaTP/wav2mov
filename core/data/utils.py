@@ -120,19 +120,18 @@ class AudioUtil:
         return torch.cat(frames,dim=0)
                     
     def get_limited_audio(self,audio,num_frames,start_frame=None) :
-            possible_num_frames = audio.shape[-1]//self.stride
-            if num_frames>possible_num_frames:
-                logger.error(f'Given num_frames {num_frames} is larger the possible_num_frames {possible_num_frames}')
+            actual_frames = audio.shape[-1]//self.stride
+            if num_frames>actual_frames:
+                logger.error(f'Given num_frames {num_frames} is larger the possible_num_frames {actual_frames}')
 
             padding = torch.zeros((audio.shape[0],self.coarticulation_factor*self.stride),device=self.device) 
             audio = torch.cat([padding,audio,padding],dim=1)
-             
-            actual_frames = audio.shape[-1]//self.stride
+ 
             actual_start_frame = (actual_frames-num_frames)//2
             if start_frame is None:
                 start_frame = actual_start_frame
                 
-            if start_frame>actual_start_frame:
+            if start_frame+num_frames>actual_frames:
                 logger.warning(f'Given Audio has {actual_frames} frames. Given starting frame {start_frame} cannot be consider for getting {num_frames}frames. Changing startframes to {actual_start_frame} frame.')
                 start_frame = actual_start_frame
                 
