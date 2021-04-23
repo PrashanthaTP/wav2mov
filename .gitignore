@@ -4,6 +4,7 @@ datasets/
 runs/
 logs/
 *.png
+!plan_v1.png
 *.gif
 *Run_*
 *.pt
