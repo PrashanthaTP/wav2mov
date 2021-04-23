@@ -2,7 +2,6 @@ import torch
 from torch import nn, optim
 
 from wav2mov.core.models.base_model import BaseModel
-# Audio and current video_frame image
 
 
 class SyncDiscriminator(BaseModel):
@@ -42,9 +41,9 @@ class SyncDiscriminator(BaseModel):
     >>>
     >>>     batch_size = audio_frame.shape[0]
     >>>     audio_frame = audio_frame.reshape(batch_size,1,-1)
-    >>>     x = self.disc(audio_frame)
-    >>>     x = torch.cat([x.reshape(batch_size,-1),self.desc_v(video_frame).reshape(batch_size,-1)],dim=1)
-    >>>     return self.fc(x)
+    >>>     video_embeddings = self.disc(audio_frame)
+    >>>     video_embeddings = torch.cat([video_embeddings.reshape(batch_size,-1),self.desc_v(video_frame).reshape(batch_size,-1)],dim=1)
+    >>>     return self.fc(video_embeddings)
 
     """
 
@@ -53,24 +52,19 @@ class SyncDiscriminator(BaseModel):
         self.hparams = hparams 
         #5 frames of 666 :3330
         self.disc_a = nn.Sequential(
-            # nn.Conv1d(1, 64, 5,1,1,bias=use_bias),#input 666 output (666-5+2)/1 = 663
-            # nn.ReLU(),
-            # nn.Conv1d(64, 128, 3, 3,bias=use_bias),#((663-3+0)/3)+1 = 660/3 +1 =221
-            # nn.ReLU(),
-            # nn.Conv1d(128, 512,3,1,1),#((221-3+2)/2)+1 = 220 +1 = 221
-            # nn.ReLU(),
-            # nn.Conv1d(512,1,3, 1),#((221-3)/1)+1 = 219
-            # nn.ReLU(),
-            nn.Conv1d(1, 64, 330, 30,bias=use_bias),#input 666 output (3330-330+0)/30 + 1 = 101
+            nn.Conv1d(1, 64, 494, 50,bias=use_bias),#input 5994 output (5994-494+0)/50 + 1 = 111
+            nn.InstanceNorm1d(64),
             nn.ReLU(),
-            nn.Conv1d(64, 128, 3, 1,bias=use_bias),#((101-3+0)/1)+1 =98
+            nn.Conv1d(64, 128, 4, 1,bias=use_bias),#((111-4+0)/1)+1 =108
+            nn.InstanceNorm1d(128),
             nn.ReLU(),
-            nn.Conv1d(128, 256,4,2,1),#((98-4+2)/2)+1 = 48 +1 = 49
+            nn.Conv1d(128, 256,4,2,1),#((108-4+2)/2)+1 = 53 +1 = 54
+            nn.InstanceNorm1d(256),
             nn.ReLU(),
-        
-        
+            nn.Conv1d(256, 256,4,2),#((54-4)/2)+1 = 25 + 1 = 26
+            nn.ReLU(),
             )
-        self.audio_fc = nn.Sequential(nn.Linear(49*256,5*256),
+        self.audio_fc = nn.Sequential(nn.Linear(26*256,5*256),
                                       nn.ReLU(),
                                       nn.Linear(5*256,256),
                                       nn.ReLU())
@@ -94,6 +88,7 @@ class SyncDiscriminator(BaseModel):
             nn.LeakyReLU(0.2)
 
         )
+        
         self.video_fc = nn.Sequential(nn.Linear(256*8*16,256*8),
                                       nn.ReLU(),
                                       nn.Linear(256*8,256),
@@ -109,21 +104,31 @@ class SyncDiscriminator(BaseModel):
 
         """
         batch_size = audio_frames.shape[0]
-        
+        print(f'inside sync forward : audio : {audio_frames.shape} {audio_frames.is_cuda} : video {video_frames.shape} {video_frames.is_cuda}') 
         
         img_height = video_frames.shape[-2]
         video_frames = video_frames[...,img_height//2:,:] #consider only lower half of the image so new height is 256/2 = 128
         
-        x = self.pre_disc_v(video_frames)
-        x = x.reshape(batch_size,x.shape[1],x.shape[-2],x.shape[-1])
-        x = self.disc_v(x).reshape(batch_size, -1)
-        x = self.video_fc(x)
+        video_embeddings = self.pre_disc_v(video_frames)#out has no Temporal(i,e where frames are stacked) dimension | 3d (F,H,W) to 2d(H,W)
+        video_embeddings = video_embeddings.reshape(batch_size,
+                                                    video_embeddings.shape[1],
+                                                    video_embeddings.shape[-2],
+                                                    video_embeddings.shape[-1])
+        video_embeddings = self.disc_v(video_embeddings).reshape(batch_size, -1)
+        video_embeddings = self.video_fc(video_embeddings)
         
         audio_frames = audio_frames.reshape(batch_size, 1, -1)
+    
+        # print(f'audio frames {audio_frames.shape} self.disc_a(audio_frames) {self.disc_a(audio_frames).shape}')
+
+        audio_embeddings = self.disc_a(audio_frames).reshape(batch_size,-1)
+        audio_embeddings = self.audio_fc(audio_embeddings)
+        # print(f'audio frames {audio_frames.shape}') 
+        #see syncnet forward pass https://github.com/Rudrabha/Wav2Lip/blob/master/models/syncnet.py#L62-L63
+        audio_embeddings = nn.functional.normalize(audio_embeddings,p=2,dim=1) 
+        video_embeddings = nn.functional.normalize(video_embeddings,p=2,dim=1) 
         # print(self.disc_a(audio_frames).shape,audio_frames.shape)
-        x = torch.cat([self.audio_fc(self.disc_a(audio_frames).reshape(batch_size, -1)),
-                      x], dim=1)
-        return self.fc(x)
+        return audio_embeddings,video_embeddings 
 
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5,0.999))

@@ -10,7 +10,7 @@ from torch.cuda import amp
 from torch.optim.lr_scheduler import StepLR
 
 from wav2mov.core.models.template import TemplateModel
-from wav2mov.models.generator_v7 import Generator, GeneratorBW
+from wav2mov.models.generator import Generator, GeneratorBW
 from wav2mov.models.sequence_discriminator import SequenceDiscriminator, SequenceDiscriminatorCNN
 from wav2mov.models.identity_discriminator import IdentityDiscriminator
 from wav2mov.models.patch_disc import PatchDiscriminator
@@ -25,32 +25,45 @@ class Wav2MovBW(TemplateModel):
         self.config = config
         self.hparams = hparams
         self.logger = logger
+        self.set_device()
 
+        self.init_models()
+        self.init_optims()
+        self.init_obj_funcions()
+        self.init_schedulers() 
+        # self.scheduler_seq_disc = StepLR(self.seq_disc,step_size=discs_step_size,gamma=discs_gamma,verbose=True)
+        self.scaler = amp.GradScaler()
+
+    def set_device(self):
         device = self.hparams['device']
         if device == 'cuda':
             device = 'cpu' if not torch.cuda.is_available() else device
         self.device = torch.device(device)
 
+    def init_models(self):
         self.gen = GeneratorBW(self.hparams['gen'])
         self.seq_disc = SequenceDiscriminatorCNN(self.hparams['disc']['sequence_disc_cnn'])
         self.id_disc = PatchDiscriminator(self.hparams['disc']['patch_disc'])
         # self.id_disc = IdentityDiscriminator(hparams['disc']['identity_disc'])
         self.sync_disc = SyncDiscriminator(self.hparams['disc']['sync_disc'])
-
         init_net(self.gen)
         init_net(self.seq_disc)
         init_net(self.id_disc)
         init_net(self.sync_disc)
-
+        
+        
+    def init_optims(self):
         self.optim_gen = self.gen.get_optimizer()
         self.optim_seq_disc = self.seq_disc.get_optimizer()
         self.optim_id_disc = self.id_disc.get_optimizer()
         self.optim_sync_disc = self.sync_disc.get_optimizer()
 
+    def init_obj_functions(self):
         self.criterion_gan = GANLoss(self.device)
         self.criterion_L1 = L1_Loss()
         self.criterion_sync = SyncLoss(self.device)
-        
+
+    def init_schedulers(self):
         gen_step_size = self.hparams['scheduler']['gen']['step_size']
         discs_step_size = self.hparams['scheduler']['discs']['step_size']
         gen_gamma = self.hparams['scheduler']['gen']['gamma']
@@ -62,9 +75,7 @@ class Wav2MovBW(TemplateModel):
                                         gamma=discs_gamma,verbose=True)
         self.scheduler_sync_disc = StepLR(self.optim_sync_disc,step_size=discs_step_size,
                                           gamma=discs_gamma,verbose=True)
-        # self.scheduler_seq_disc = StepLR(self.seq_disc,step_size=discs_step_size,gamma=discs_gamma,verbose=True)
-        self.scaler = amp.GradScaler()
-
+            
     def forward(self):
         # self.prev_fake_video_frame = self.curr_fake_video_frames
         self.curr_fake_video_frames = self.gen( self.curr_real_audio_frames, 
@@ -78,25 +89,24 @@ class Wav2MovBW(TemplateModel):
            
 
     def _set_frame_history(self):
-        # self.real_frames = None
         self.fake_frames = None
-        # self.audio_frames = None
-
         self.curr_real_video_frames = None
         self.curr_real_audio_frames = None
-
         self.curr_fake_video_frames = None
 
     def __get_stride(self):
         return self.hparams['data']['audio_sf']//self.hparams['data']['video_fps']
-    
-    def on_train_start(self):
-        self._set_frame_history()
-        self.to(self.device)
+        
+    def set_in_train_mode(self):
         self.gen.train()
         self.id_disc.train()
         self.seq_disc.train()
         self.sync_disc.train()
+       
+    def on_train_start(self):
+        self._set_frame_history()
+        self.set_in_train_mode()
+        self.to(self.device)
         self.accumulation_steps = self.hparams['data']['batch_size']//self.hparams['data']['mini_batch_size']
         self.zero_grad(set_to_none=True)
         self.audio_util = AudioUtil(self.hparams['data']['coarticulation_factor'],self.__get_stride(),device=self.hparams['device'])

@@ -7,9 +7,10 @@ logs/
 *.gif
 *Run_*
 *.pt
+archieves/
 # Vs code
 .vscode
-.vimrc
+*.vimrc
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
