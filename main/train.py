@@ -35,63 +35,50 @@ def process_video(video, hparams):
 
     img_channels = hparams['img_channels']
     img_size = hparams['img_size']
+    
     transforms = get_transforms((img_size, img_size), img_channels)
-    # channel axis must be after the batch size,frame_count
-    #change video shape from (B,F,H,W,C) to (B,F,C,H,W)
-    video = video.permute(0, 1, 4, 2, 3)
-
-    video = video/255  # !important
     bsize, frames, channels, height, width = video.shape
-
-    video = video.reshape(bsize*frames, channels, height, width)
-    #if not done the `Resize transform` gets angry that it got 3d images
-    # while it was assured previously that it will get 2d images
+    video = video.reshape(bsize*frames, channels, height, width)#vtransforms.Reshape requires input to be of 3d shape
     video = transforms(video)
-    video = video.reshape(bsize, frames, video.shape[-3], video.shape[-2], video.shape[-1])
+    video = video.reshape(bsize, frames, channels,height,width)
     return video
 
 
 def process_sample(sample, hparams):
 
-    stride = hparams['data']['audio_sf']//hparams['data']['video_fps']
     device = get_device(hparams)
-    audio, video = sample
-
-    audio, video = audio.to(device), video.to(device)
-
-    get_frames_from_idx, get_frames_from_range = process_audio(audio, hparams)
-    video = process_video(video, hparams)
-
-    num_video_frames = video.shape[1]
-    num_audio_frames = audio.shape[1]//stride
-    limit = min(num_audio_frames, num_video_frames)
-
-    return get_frames_from_idx, get_frames_from_range, video, limit
+    audio,audio_frames,video = sample
+    audio = audio.to(device)
+    audio_frames = audio_frames.to(device)
+    video = video.to(device)
+    video = process_video(video)
+    return audio,audio_frames,video
    
+def resume_checkpoint(model,options,config,logger):
+    if getattr(options, 'model_path', None) is not None:
+        loading_version = os.path.basename(options.model_path)
+        logger.debug(f'Loading pretrained weights : {config.version} <== {loading_version}')
+
+        prev_epoch = model.load(checkpoint_dir=options.model_path)
+        if prev_epoch is not None:
+            start_epoch = prev_epoch+1
+        logger.debug(f'weights loaded successfully: {config.version} <== {loading_version}')
+    
 def train_model(options, hparams, config, logger):
-    train_dl, mean, std = get_train_dl(options, config, hparams)
+    train_dl = get_train_dl(options, config, hparams)
 
     num_epochs = hparams['num_epochs']
     accumulation_steps = hparams['data']['batch_size']//hparams['data']['mini_batch_size']
 
-    num_batches = len(train_dl)//accumulation_steps
+    num_batches = len(train_dl)//accumulation_steps#number of batches of size batch_size (actually of mini_batch_size)
     logger.info(
         'options numm_videos : {options.num_videos},mean :{mean},std :{std}')
     logger.info(
         f'train_dl : len(train_dl) :{len(train_dl)} : num_batches: {num_batches}')
 
     start_epoch = 0
-    model = Wav2MovBW(config, hparams, logger)
-
-    if getattr(options, 'model_path', None) is not None:
-        loading_version = os.path.basename(options.model_path)
-        logger.debug(
-            f'Loading pretrained weights : {config.version} <== {loading_version}')
-
-        prev_epoch = model.load(checkpoint_dir=options.model_path)
-        if prev_epoch is not None:
-            start_epoch = prev_epoch+1
-        logger.debug(f'weights loaded successfully: {config.version} <== {loading_version}')
+    model = Wav2MovBW(hparams,config,logger)
+    resume_checkpoint(model,options,config,logger)
 
     ################################
     # Setup loggers and loss meters
@@ -126,10 +113,9 @@ def train_model(options, hparams, config, logger):
             video = process_video(video,hparams)
             batch_size,num_frames,channels,height,width = video.shape
             
-            still_images= video[:, -STILL_IMAGE_IDX, :, :, :]
-            still_images = still_images.repeat((1,num_frames,1,1,1))
-            still_images = still_images.reshape((batch_size*num_frames,channels,height,width))
-            model.set_condition(still_images)
+            ref_frames= video[:, -STILL_IMAGE_IDX, :, :, :]
+            
+            model.set_input(audio,audio_frames,video,ref_frames)
             model.on_batch_start(batch_idx)  # reset frames history
             
             
@@ -157,8 +143,8 @@ def train_model(options, hparams, config, logger):
                     add_to_board(tensor_logger, batch_loss_meters.average(),
                                  steps, scalar_type='loss')
 
-                epoch_loss_meters.update(
-                    batch_loss_meters.average(), n=hparams['data']['batch_size'])
+                epoch_loss_meters.update(batch_loss_meters.average(), 
+                                         n=hparams['data']['batch_size'])
 
                 logger.debug(batch_progress_meter.get_display_str((batch_idx+1)//hparams['data']['batch_size']))
                 logger.debug(f"Batch duration : {batch_duration:0.4f} seconds or {batch_duration/60:0.4f} minutes")

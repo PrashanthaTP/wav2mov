@@ -1,8 +1,10 @@
 {
 	"seed": 10,
+	"ref_frame_idx":-10,
 	"device": "cuda",
 	"img_size": 256,
 	"num_epochs": 4,
+	"pre_learning_epochs":10,
 	"img_channels": 1,
 	"data": {
 		"coarticulation_factor": 2,

@@ -11,9 +11,9 @@ def add_img_grid(tensor_logger, img_grid, global_step, img_type):
 
 
 def get_train_dl(options,config, hparams):
-    loaders, mean, std = get_dataloaders(options,config, hparams, shuffle=True)
+    loaders = get_dataloaders(options,config, hparams, shuffle=True,get_mean_std=False)
     train_dl = loaders.train
-    return train_dl, mean, std
+    return train_dl 
 
 
 def get_transforms(img_size, img_channels):
@@ -61,3 +61,4 @@ def get_meters_v2(hparams,num_batches):
     batch_progress_meter = ProgressMeter(num_batches, batch_loss_meters.as_list(),prefix='[BATCH]')
 
     return batch_loss_meters, epoch_loss_meters, epoch_progress_meter,batch_progress_meter
+

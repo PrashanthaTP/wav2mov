@@ -46,9 +46,16 @@ class AverageMetersList:
     def __init__(self, names, fmt=':0.4f'):
         self.meters = {name:AverageMeter(name,fmt) for name in names}
         
-    def update(self,d,n):
-        for name,value in d.items():
+    def update(self,d:dict):
+        """update the average meters
+        
+        Args:
+            d (dict): key is the name of the meter and value is a tuple containing value and the multiplier
+            
+        """
+        for name,(value,n) in d.items():
             self.meters[name].update(value,n)
+
     
     def reset(self):
         for name in self.meters.keys():
@@ -70,18 +77,22 @@ class AverageMetersList:
         return '\t'.join(f'{key}:{val:0.4f}' for key,val in avg.items())
     
 class ProgressMeter:
-    def __init__(self,num_epochs,meters,prefix=''):
-        self.batch_fmt_str = self._get_epoch_fmt_str(num_epochs)
+    def __init__(self,steps,meters,prefix=''):
+        self.batch_fmt_str = self._get_epoch_fmt_str(steps)
         self.meters = meters
         self.prefix = prefix
     
-    def get_display_str(self,epoch):
-        entries = [self.prefix + self.batch_fmt_str.format(epoch)]
+    def get_display_str(self,step):
+        entries = [self.prefix + self.batch_fmt_str.format(step)]
         entries += [str(meter) for meter in self.meters]
         return '\t'.join(entries)
     
-    def _get_epoch_fmt_str(self,num_epochs):
-        num_digits = len(str(num_epochs//1))
+    def _get_epoch_fmt_str(self,steps):
+        num_digits = len(str(steps//1))
         fmt = '{:' + str(num_digits) + 'd}'
-        return '[' + fmt +'/'+ fmt.format(num_epochs) + ']'
-    
+        return '[' + fmt +'/'+ fmt.format(steps) + ']'
+
+
+
+def get_duration_in_minutes_seconds(self,duration):
+    return duration//60,duration

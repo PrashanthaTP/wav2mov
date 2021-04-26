@@ -11,9 +11,11 @@ from wav2mov.core.data.utils import Sample
 
 # TODO : using MFCCS
 class AudioVideoDataset(Dataset):
-    """Dataset Class for the numpy file containing mouth landamarks and corresponding audio frames.
     """
-    def __init__(self,root_dir,
+    Dataset for audio and video numpy files 
+    """
+    def __init__(self,
+                 root_dir,
                  filenames_text_filepath,
                  audio_sf,
                  video_fps,
@@ -53,17 +55,13 @@ class AudioVideoDataset(Dataset):
             idx = idx.tolist()
             
         audio = self.get_audio(idx)
-        
-        # audio = audio.reshape(1,audio.shape[0])
-    
-        # audio = self.__frame_wise_split(audio)
         video = self.get_video_frames(idx)
-        sample = Sample(torch.from_numpy(audio).float(),torch.from_numpy(video).float())
-        
+        audio = torch.from_numpy(audio)
+        video = torch.from_numpy(video).permute(0,1,4,2,3)#B,F,H,W,C ==> B,F,C,H,W
+        video = video/255
+        sample = Sample(audio,video)
         if self.transform:
             sample = self.transform(sample)
-       
-   
         return sample
     
     def __pad_audio(self,audio):

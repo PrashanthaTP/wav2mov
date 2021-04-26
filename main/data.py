@@ -41,9 +41,7 @@ def get_dataloaders(options,config,params,shuffle=True,get_mean_std=True,collate
         hparams['mean'] = [value for value in mean.tolist() ]
         hparams['std'] = [value for value in std.tolist() ]
         params.update('data',hparams)
-    if not get_mean_std:
-        return DataloadersPack(train_dl,test_dl)
-    return DataloadersPack(train_dl,test_dl),hparams['mean'],hparams['std']
+    return DataloadersPack(train_dl,test_dl)
 
 
 def get_mean_and_std(dataloader,img_channels,attr):

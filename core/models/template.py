@@ -17,13 +17,13 @@ class TemplateModel(nn.Module):
         pass
     def optimize_parameters(self,*args,**kwargs):
         pass
+    def on_batch_end(self,*args,**kwargs):
+        pass
     def on_epoch_end(self,*args,**kwargs):
         pass
     def log(self,*args,**kwargs):
         pass
     def validate(self,*args,**kwargs):
         pass
-    def on_epoch_end(self,*args,**kwargs):
-        pass 
     def on_train_end(self,*args,**kwargs):
         pass
