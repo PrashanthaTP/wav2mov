@@ -1,6 +1,6 @@
 
 shape_predictor_68_face_landmarks.dat
-datasets/
+datasets/*
 !datasets/create_file_list.py
 runs/
 logs/
