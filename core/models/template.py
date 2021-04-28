@@ -6,7 +6,11 @@ class TemplateModel(nn.Module):
     
     def forward(self,*args,**kwargs):
         raise NotImplementedError("Forward method must be implemented")
-    
+     
+    def on_run_start(self,*args,**kwargs):
+        pass
+    def on_run_end(self,*args,**kwargs):
+        pass
     def on_train_start(self,*args,**kwargs):
         pass
     def on_epoch_start(self,*args,**kwargs):

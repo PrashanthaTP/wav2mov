@@ -1,0 +1,14 @@
+April 25 Sunday and April 26 Monday
+* write callback based engine and model
+* write callbacks for
+    + loss tracking
+    + training duration 
+    + saving checkpoint
+
+April 27 Tuesday
++ test callback based system
++ place some reshaping work of batch data inside Dataset class itself
+
+April 28
++ Fixing errors in audio framing and wav2mov model
++ Fixing error in time calcualation

@@ -4,7 +4,6 @@ import os
 import torch
 from torch.utils.data import Dataset
 from collections import namedtuple
-from wav2mov.core.utils.audio import AudioUtil
 
 from wav2mov.core.data.utils import Sample
 
@@ -57,7 +56,7 @@ class AudioVideoDataset(Dataset):
         audio = self.get_audio(idx)
         video = self.get_video_frames(idx)
         audio = torch.from_numpy(audio)
-        video = torch.from_numpy(video).permute(0,1,4,2,3)#B,F,H,W,C ==> B,F,C,H,W
+        video = torch.from_numpy(video).permute(0,3,1,2)#F,H,W,C ==> F,C,H,W
         video = video/255
         sample = Sample(audio,video)
         if self.transform:

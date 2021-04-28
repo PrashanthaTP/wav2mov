@@ -11,15 +11,15 @@ Lens = namedtuple('lens', ('audio', 'video'))
 
 
 
-def collate_fn(batch):
-    videos = [(torch.tensor(sample.video),(sample.video.shape[0])) for sample in batch]
-    videos,video_lens = list(zip(*videos))
-    audios = [(torch.tensor(sample.audio),(sample.audio.shape[0])) for sample in batch]
-    audios,audio_lens = list(zip(*audios))
-    videos = pad_sequence(videos, batch_first=True)
-    audios = pad_sequence(audios, batch_first=True)
+# def collate_fn(batch):
+#     videos = [(torch.tensor(sample.video),(sample.video.shape[0])) for sample in batch]
+#     videos,video_lens = list(zip(*videos))
+#     audios = [(torch.tensor(sample.audio),(sample.audio.shape[0])) for sample in batch]
+#     audios,audio_lens = list(zip(*audios))
+#     videos = pad_sequence(videos, batch_first=True)
+#     audios = pad_sequence(audios, batch_first=True)
   
-    return Sample(audios,videos),Lens(audio_lens,video_lens)
+#     return Sample(audios,videos),Lens(audio_lens,video_lens)
 
 
 def get_frames_limit(audio_lens,video_lens,stride):
@@ -36,10 +36,11 @@ def get_batch_collate(hparams):
     stride =  hparams['audio_sf']// hparams['video_fps']
     audio_util = AudioUtil(hparams['coarticulation_factor'],stride)
     def collate_fn(batch):
-        videos = [(torch.tensor(sample.video),sample.video.shape[0]) for sample in batch]
+        # print('inside collate ',type(batch[0].video))
+        videos = [(sample.video,sample.video.shape[0]) for sample in batch]
         videos,video_lens = list(zip(*videos))
         
-        audios = [(torch.tensor(sample.audio).unsqueeze(0),sample.audio.shape[0]) for sample in batch]
+        audios = [(sample.audio.unsqueeze(0),sample.audio.shape[0]) for sample in batch]
         audios,audio_lens = list(zip(*audios))
 
         req_frames = get_frames_limit(audio_lens,video_lens,stride)

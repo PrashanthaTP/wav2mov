@@ -1,10 +1,13 @@
-from .callbacks import CallbackStates,CallbackDispatcher
+import logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.WARNING)
+from .callbacks import CallbackEvents,CallbackDispatcher
 
 
 class TemplateEngine:
 
     def __init__(self):
-        self.__event = CallbackStates.NONE
+        self.__event = CallbackEvents.NONE
         self.__dispatcher = CallbackDispatcher()     
     
     @property
@@ -20,8 +23,13 @@ class TemplateEngine:
         
     def dispatch(self,event,*args,**kwargs):
         self.event = event
-        self.__dispatcher.dispatch(event,*args,*kwargs)
+        # logger.debug(f'{self.event},args : {args} kwargs : {kwargs}')
+        self.__dispatcher.dispatch(event,*args,**kwargs)
         
+    def on_run_start(self,*args,**kwargs):
+        pass
+    def on_run_end(self,*args,**kwargs):
+        pass
     def on_train_start(self,*args,**kwargs):
         pass
     def on_epoch_start(self,*args,**kwargs):

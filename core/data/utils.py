@@ -105,13 +105,13 @@ class AudioUtil:
         # if len(audio.shape)<2:
         #     audio = audio.unsqueeze(0)
             
-        actual_frames = audio.shape[-1]//self.stride
-        num_frames = actual_frames if num_frames is None else num_frames
+        possible_num_frames = audio.shape[-1]//self.stride
+        num_frames = possible_num_frames if num_frames is None else num_frames
         
-        if num_frames > actual_frames:
-            raise ValueError(f'given audio has {actual_frames} frames but {num_frames} frames requested.')
-        start_idx = (actual_frames-num_frames)//2
-        end_idx = (actual_frames+num_frames)//2 #start_idx + (num_frames) 
+        if num_frames > possible_num_frames:
+            raise ValueError(f'given audio has {possible_num_frames} frames but {num_frames} frames requested.')
+        start_idx = (possible_num_frames-num_frames)//2
+        end_idx = (possible_num_frames+num_frames)//2 #start_idx + (num_frames) 
         padding = torch.zeros((1,self.coarticulation_factor*self.stride),device=self.device) 
         audio = torch.cat([padding,audio,padding],dim=1)
 
@@ -127,13 +127,18 @@ class AudioUtil:
             padding = torch.zeros((audio.shape[0],self.coarticulation_factor*self.stride),device=self.device) 
             audio = torch.cat([padding,audio,padding],dim=1)
              
-            actual_frames = audio.shape[-1]//self.stride
-            actual_start_frame = (actual_frames-num_frames)//2
+            # possible_num_frames = audio.shape[-1]//self.stride
+            actual_start_frame = (possible_num_frames-num_frames)//2
+            # [......................................................]
+            #         [................................]
+            #         |<-----num_frames---------------->|
+            #.........^
+            #   actual start frame
             if start_frame is None:
                 start_frame = actual_start_frame
                 
-            if start_frame>actual_start_frame:
-                logger.warning(f'Given Audio has {actual_frames} frames. Given starting frame {start_frame} cannot be consider for getting {num_frames}frames. Changing startframes to {actual_start_frame} frame.')
+            if start_frame+num_frames>possible_num_frames:#[why > not >=]think if possible num_frames is 50 and 50 is the requied num_frames and start_frame is zero
+                logger.warning(f'Given Audio has {possible_num_frames} frames. Given starting frame {start_frame} cannot be consider for getting {num_frames} frames. Changing startframes to {actual_start_frame} frame.')
                 start_frame = actual_start_frame
                 
             end_frame = start_frame + (num_frames) #exclusive

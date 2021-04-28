@@ -10,19 +10,20 @@ class State:
         for name in self.names:
             setattr(self,name,None)
             
-    def reset(self,*names):
+    def reset(self,names):
         for name in names:
             setattr(self,name,None)
             
         
 class Engine(TemplateEngine):
-    def __init__(self,logger):
+    def __init__(self,options,hparams,config,logger):
         super().__init__()
         self.logger = logger
+        self.configure(options,hparams,config)
         self.state = State(['num_batches','epoch','batch_idx','start_epoch','logs'])
     
         
-    def configure(self,hparams,options,config):
+    def configure(self,options,hparams,config):
         self.hparams = hparams
         self.options = options
         self.config = config
@@ -36,16 +37,17 @@ class Engine(TemplateEngine):
        pass 
     
     def resume_checkpoint(self,model):
+        prev_epoch = 0
         if getattr(self.options, 'model_path', None) is  None:
-            return
+            return prev_epoch
         loading_version = os.path.basename(self.options.model_path)
         self.logger.debug(f'Loading pretrained weights : {self.config.version} <== {loading_version}')
 
         prev_epoch = model.load(checkpoint_dir=self.options.model_path)
-        if prev_epoch is not None:
-            self.state.start_epoch = prev_epoch+1
-            self.logger.debug(f'Start Epoch : {prev_epoch+1}')
+        if prev_epoch is None:
+            prev_epoch = 0
         self.logger.debug(f'weights loaded successfully: {self.config.version} <== {loading_version}')
+        return prev_epoch
     
     def dispatch(self, event):
         super().dispatch(event,state=self.state)
@@ -54,7 +56,7 @@ class Engine(TemplateEngine):
         callbacks = callbacks or []
         callbacks = [model] + callbacks
         self.register(callbacks)
-        self.resume_checkpoint(model)
+        self.state.start_epoch = self.resume_checkpoint(model)
         
         train_dl = dataloaders_ntuple.train
         self.state.num_batches = len(train_dl)
@@ -67,7 +69,7 @@ class Engine(TemplateEngine):
             for batch_idx,batch in enumerate(train_dl):
                 self.state.batch_idx = batch_idx
                 self.dispatch(Events.BATCH_START)
-                model.set_input(batch,state=self.state)
+                model.setup_input(batch,state=self.state)
                 logs = model.optimize(state=self.state)
                 self.state.logs = logs
                 self.dispatch(Events.BATCH_END)

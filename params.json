@@ -7,6 +7,8 @@
 	"pre_learning_epochs":10,
 	"img_channels": 1,
 	"data": {
+		"img_size":256,
+		"img_channels":1,
 		"coarticulation_factor": 2,
 		"audio_sf": 16000,
 		"video_fps": 24,

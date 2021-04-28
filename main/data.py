@@ -5,7 +5,9 @@ from torchvision import transforms as vtransforms
 from tqdm import tqdm
 from collections import namedtuple
 from torch.utils.data import DataLoader,random_split
+
 from wav2mov.core.data.datasets import AudioVideoDataset
+from wav2mov.core.data.transforms import ResizeGrayscale
 
 DataloadersPack = namedtuple('dataloaders',('train','val'))
 
@@ -17,11 +19,15 @@ def get_dataset(options,config,hparams):
     filenames_txt = config['filenames_txt']
     video_fps = hparams['video_fps']
     audio_sf = hparams["audio_sf"]
+    img_size = hparams['img_size']
+    target_img_shape = (hparams['img_channels'],img_size,img_size)
+    transform = ResizeGrayscale(target_img_shape)
     dataset = AudioVideoDataset(root_dir=root_dir,
                                 filenames_text_filepath=filenames_txt,
                                 audio_sf=audio_sf,
                                 video_fps=video_fps,
-                                num_videos=options.num_videos)
+                                num_videos=options.num_videos,
+                                transform=transform)
     return dataset
 
 def get_dataloaders(options,config,params,shuffle=True,get_mean_std=True,collate_fn=None):

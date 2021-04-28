@@ -142,7 +142,7 @@ class Decoder(nn.Module):
 
     def crop(self, encoded_features, x):
         _, _, H, W = x.shape
-        return vtransforms.Resize((H, W),interpolation=Image.BICUBIC)(encoded_features)
+        return vtransforms.Resize((H, W),interpolation= vtransforms.InterpolationMode.BICUBIC)(encoded_features)
 
 
 class Generator(BaseModel):

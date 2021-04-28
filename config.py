@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
-
+logging.basicConfig(level=logging.DEBUG)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_curr_run_str():
@@ -74,13 +74,15 @@ class Config :
         if item in self.fixed_paths:
             return self.vals[item]
         # self.vals[item] =  re.sub(r'(\\)+', os.sep, self.vals[item])
+        if os.sep != '\\':
+              self.vals[item] = re.sub(r'(\\)+', os.sep, self.vals[item])
         if 'fullpath' in item or 'dir' in item:
             path = os.path.dirname(self.vals[item]) if '.' in os.path.basename(self.vals[item]) else self.vals[item]
             # print('[config]',item ,':',path)
             # print(os.path.dirname(self.vals[item]))
             # path = re.sub(r'(\\)+', os.sep, path)
-            if os.sep != '\\':
-              path = re.sub(r'(\\)+', os.sep, path)
+            # if os.sep != '\\':
+            #   path = re.sub(r'(\\)+', os.sep, path)
             os.makedirs(path,exist_ok=True)
             # print(f'created : {path}')
             # print(item,self.vals[item],os.path.isdir(path))

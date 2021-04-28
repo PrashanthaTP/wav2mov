@@ -5,6 +5,7 @@ from datetime import datetime
 from torch.utils.tensorboard.writer import SummaryWriter
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 TIME_FORMAT = "%b %d,%Y %H:%M:%S"
 
 from pythonjsonlogger import jsonlogger

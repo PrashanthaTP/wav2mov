@@ -54,6 +54,8 @@ class AverageMetersList:
             
         """
         for name,(value,n) in d.items():
+            if n==0:
+                continue
             self.meters[name].update(value,n)
 
     
@@ -63,7 +65,7 @@ class AverageMetersList:
     
     def as_list(self):
         return self.meters.values()
-    
+             
     def average(self):
         return {name:meter.avg for name,meter in self.meters.items()}
     

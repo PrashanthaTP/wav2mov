@@ -8,7 +8,7 @@ from wav2mov.main.data import get_dataloaders
 
 
 def train_model(options,hparams,config,logger):
-    engine = Engine(logger)
+    engine = Engine(options,hparams,config,logger)
     model = Wav2MovBW(hparams,config,logger)
     collate_fn = get_batch_collate(hparams['data'])
     dataloaders_ntuple = get_dataloaders(options,config,hparams,
