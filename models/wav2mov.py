@@ -145,7 +145,7 @@ class Wav2Mov(TemplateModel):
             # self.logger.debug(f'inside sub batching with fraction {fraction} of {num_frames} frames| {start_fraction} : {end_fraction}')
             real_video_frames = self.video[:,start_fraction:end_fraction,:,:,:]
             batch['real_video_frames'] = real_video_frames
-            ref_video_frames = self.get_ref_frames(real_video_frames)
+            batch['ref_video_frames'] = self.get_ref_frames(real_video_frames)
             # self.logger.debug(f'inside get sub batch {ref_video_frames.shape},{real_video_frames.shape}')
             # batch['ref_video_frames'] = self.squeeze_frames(ref_video_frames)
             

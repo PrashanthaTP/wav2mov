@@ -251,14 +251,15 @@ class NoiseGenerator(nn.Module):
         #     # nn.Linear(64, 28*28),
         #     # nn.ReLU()
         # )
-        self.features_len = 8*8
+        self.features_len = 10
+        self.hidden_size = 8*8#see catenation of encoded noise and audio
         self.gru = nn.GRU(input_size=self.features_len,
-                          hidden_size=100,
+                          hidden_size=self.hidden_size,
                           num_layers=1,
                           batch_first=True)
         #input should be of shape batch_size,seq_len,input_size
     def forward(self,batch_size,num_frames):
-        noise = torch.randn(batch_size,num_frames,self.features_len)
+        noise = torch.randn(batch_size,num_frames,self.features_len,device=self.device)
         out,_ = self.gru(noise)
         return out#(batch_size,seq_len,features)
 
@@ -282,7 +283,7 @@ class GeneratorBW(BaseModel):
         
     def _squeeze_batch_frames(self,target):
         batch_size,num_frames,*extra = target.shape
-        return target.squeeze(batch_size*num_frames,*extra)
+        return target.reshape(batch_size*num_frames,*extra)
 
     def forward(self, audio_frames, ref_video_frames):
         #audio : B,F,Sw
