@@ -4,7 +4,8 @@ from torch.functional import Tensor
 import imageio
 import numpy as np
 from matplotlib import pyplot as plt
-
+import warnings
+warnings.filterwarnings( "ignore", module = "matplotlib\..*" )
 
 def show_img(img,cmap='viridis'):
     if isinstance(img,np.ndarray):

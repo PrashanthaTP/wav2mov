@@ -6,7 +6,8 @@ import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_curr_run_str():

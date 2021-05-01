@@ -127,9 +127,10 @@ class TimeTrackerCallback(Callbacks):
         
 
 class ModelCheckpoint(Callbacks):
-    def __init__(self,model,hparams,save_every):
+    def __init__(self,model,hparams,config,save_every):
         self.model = model
         self.hparams = hparams
+        self.config = config
         self.are_hparams_saved = False
         self.save_every = save_every
         
@@ -139,7 +140,7 @@ class ModelCheckpoint(Callbacks):
             self.model.save(epoch)
             if not self.are_hparams_saved:
                 #to avoid multiple file writes as hparams not edited anywhere after initial setup
-                self.hparams.save()
+                self.hparams.save(self.config['params_checkpoint_fullpath'])
                 self.are_hparams_saved = True
                 
     def on_train_end(self,state):

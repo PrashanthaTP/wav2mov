@@ -126,7 +126,7 @@ class Wav2MovTemplate(TemplateModel):
                                             is_real_target=False)/scale
             
             if not exclude_fake: 
-                disc_out = self.sync_disc(self.audio_seq,self.fake_frames.detach())
+                disc_out = self.sync_disc(self.audio_seq,self.fake_video_frames.detach())
                 loss_sync += self.criterion_sync(*disc_out,
                                                 is_real_target=False)/scale
                 

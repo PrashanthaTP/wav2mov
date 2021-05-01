@@ -17,8 +17,8 @@ from wav2mov.config import get_config
 from wav2mov.params import params
 
 from wav2mov.main.preprocess import create_from_grid_dataset
-from wav2mov.main.train_v6 import train_model
-from wav2mov.main.test_v6 import test_model
+from wav2mov.main.train_v2 import train_model
+from wav2mov.main.test import test_model
 
 from wav2mov.main.options import Options,set_options
 from wav2mov.main.validate_params import check_batchsize

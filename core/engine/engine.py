@@ -1,6 +1,7 @@
 import logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.WARNING)
+# logging.basicConfig(level=logging.WARNING)
+logger.setLevel(logging.DEBUG)
 from .callbacks import CallbackEvents,CallbackDispatcher
 
 
