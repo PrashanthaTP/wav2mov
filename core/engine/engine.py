@@ -53,3 +53,9 @@ class TemplateEngine:
         """
         print("[TEMPLATE ENGINE] 'run' function not implemented")
         pass
+    def run(self,*args,**kwargs):
+        """
+        test script goes here  
+        """
+        print("[TEMPLATE ENGINE] 'testing' function not implemented")
+        pass

@@ -40,7 +40,7 @@ def get_dataloaders(options,config,params,shuffle=True,get_mean_std=True,collate
     test_sz = N-train_sz
     train_ds , test_ds = random_split(dataset,[train_sz,test_sz])
     train_dl = DataLoader(train_ds,batch_size=batch_size,shuffle=shuffle,collate_fn=collate_fn,pin_memory=True)
-    test_dl = DataLoader(test_ds,batch_size=batch_size,shuffle=shuffle,collate_fn=collate_fn)
+    test_dl = DataLoader(test_ds,batch_size=1,shuffle=shuffle,collate_fn=collate_fn)
     
     if not all(hparams.get(item,None) for item in ('mean','std')):
         mean,std = get_mean_and_std(train_dl,params['img_channels'],'video')

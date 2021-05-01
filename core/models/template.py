@@ -31,3 +31,6 @@ class TemplateModel(nn.Module):
         pass
     def on_train_end(self,*args,**kwargs):
         pass
+    
+    def load(self,checkpoint):
+        self.load_state_dict(checkpoint)

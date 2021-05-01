@@ -36,7 +36,7 @@ class Engine(TemplateEngine):
         # self.logger.info(f'train_dl : len(train_dl) :{len(train_dl)} : num_batches: {num_batches}')
        pass 
     
-    def resume_checkpoint(self,model):
+    def load_checkpoint(self,model):
         prev_epoch = 0
         if getattr(self.options, 'model_path', None) is  None:
             return prev_epoch
@@ -56,7 +56,7 @@ class Engine(TemplateEngine):
         callbacks = callbacks or []
         callbacks = [model] + callbacks
         self.register(callbacks)
-        self.state.start_epoch = self.resume_checkpoint(model)
+        self.state.start_epoch = self.load_checkpoint(model)
         
         train_dl = dataloaders_ntuple.train
         self.state.num_batches = len(train_dl)
@@ -78,9 +78,18 @@ class Engine(TemplateEngine):
             self.dispatch(Events.EPOCH_END)
         self.dispatch(Events.TRAIN_END)
         self.dispatch(Events.RUN_END)
-        
+    
+    def to_device(self,device,*args):
+        return [arg.to(device) for arg in args]
                 
-        
-        
+    def test(self,model,test_dl):
+       last_epoch = self.load_checkpoint(model)
+       if last_epoch is None or last_epoch==0:
+           self.logger.warning(f'Testing an untrained model !!!.')
+       sample = next(iter(test_dl))
+       audio,audio_frames,video = sample
+    #    audio,audio_frames,video = self.to_device('cpu',audio,audio_frames,video)
+       model.test(audio,audio_frames,video)
 
+  
     
