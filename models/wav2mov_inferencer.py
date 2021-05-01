@@ -34,17 +34,17 @@ class Wav2movInferencer(TemplateModel):
         self.gen.eval() 
         batch_size,num_frames,*extra = ref_video_frames
         assert batch_size==audio_frames.shape[0] and num_frames ==audio_frames.shape[1]
-        audio_frames = self._squeeze_batch_frames(audio_frames)
-        ref_video_frames = self._squeeze_batch_frames(ref_video_frames)
+        # audio_frames = self._squeeze_batch_frames(audio_frames)
+        # ref_video_frames = self._squeeze_batch_frames(ref_video_frames)
         fake_frames =  self.gen(audio_frames,ref_video_frames)
-        return fake_frames.reshape(batch_size,num_frames,*extra)
+        return fake_frames
 
     @no_grad_wrapper
     def generate(self,audio_frames,ref_video_frames,fraction=None):
         if fraction is None:
             return self(audio_frames,ref_video_frames)
         else:
-            return self.generate_with_fraction(audio_frames,ref_video_frames,fraction)
+            return self._generate_with_fraction(audio_frames,ref_video_frames,fraction)
         
     @no_grad_wrapper
     def test(self,audio_frames,video):
@@ -57,7 +57,7 @@ class Wav2movInferencer(TemplateModel):
         """
         fraction = 10
         ref_video_frames = self._get_ref_video_frames(video)
-        return self.generate_with_fraction(audio_frames,ref_video_frames,fraction)
+        return self.generate(audio_frames,ref_video_frames,fraction)
     
     def _get_ref_video_frames(self,video):
         num_frames = video.shape[1]
@@ -73,7 +73,7 @@ class Wav2movInferencer(TemplateModel):
     
         
     
-    def generate_with_fraction(self,audio_frames,ref_video_frames,fraction):
+    def _generate_with_fraction(self,audio_frames,ref_video_frames,fraction):
         num_frames = audio_frames.shape[1]
         start_frame = 0
         fake_video_frames= []

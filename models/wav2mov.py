@@ -101,25 +101,33 @@ class Wav2Mov(TemplateModel):
 
     def get_sub_seq(self):
         """ return smaller set of frames from audio,real_video_frames,fake_video_frames"""
-        self.video = self.swap_channel_frame_axes(self.video)
-        self.fake_video_frames = self.swap_channel_frame_axes(self.fake_video_frames)
+           
+        ret = {}
+      
+
+        # self.video = self.swap_channel_frame_axes(self.video)
+   
         OFFSET_SYNC_OUT_OF_SYNC = 15
         NUM_FRAMES_FOR_SYNC = 5
-        NUM_FRAMES_ACTUAL = self.video.shape[2] #num_frames is present in 3rd dimension now.(B,C,F,H,W)
+        NUM_FRAMES_ACTUAL = self.video.shape[1] #num_frames is present in 3rd dimension now.(B,C,F,H,W)
         NUM_FRAMES_REQ_MIN =  OFFSET_SYNC_OUT_OF_SYNC + 2*NUM_FRAMES_FOR_SYNC
         if NUM_FRAMES_ACTUAL < NUM_FRAMES_REQ_MIN: 
              raise ValueError(f'Given video should atleast have {NUM_FRAMES_REQ_MIN} frames. Instead given video has {NUM_FRAMES_ACTUAL} frames')
-        randpos = random.randint(0, self.video.shape[2]-NUM_FRAMES_FOR_SYNC-OFFSET_SYNC_OUT_OF_SYNC)
-        
-        ret = {}
-        ret['real_video_frames'] = self.video[..., randpos:randpos+NUM_FRAMES_FOR_SYNC, :, :]
-        ret['fake_video_frames'] = self.fake_video_frames[...,randpos:randpos+NUM_FRAMES_FOR_SYNC, :, :]
-        
+
+        randpos = random.randint(0, self.video.shape[1]-NUM_FRAMES_FOR_SYNC-OFFSET_SYNC_OUT_OF_SYNC)
+      
+        real_video_frames = self.video[:, randpos:randpos+NUM_FRAMES_FOR_SYNC, ...]
+
+        audio_frames = self.audio_frames[:,randpos:randpos+NUM_FRAMES_FOR_SYNC,:]
+        ref_frames = self.get_ref_frames(real_video_frames)
+        self.fake_video_frames = self(audio_frames,ref_frames)
+        ret['fake_video_frames'] = self.swap_channel_frame_axes(self.fake_video_frames)
+        ret['real_video_frames'] = self.swap_channel_frame_axes(real_video_frames)
         ret['audio_seq'] = self.audio_util.get_limited_audio(self.audio,NUM_FRAMES_FOR_SYNC,start_frame=randpos)
         ret['audio_seq_out_of_sync'] = self.audio_util.get_limited_audio(self.audio,NUM_FRAMES_FOR_SYNC,start_frame=randpos+OFFSET_SYNC_OUT_OF_SYNC)
         
         return ret
-           
+    
     def __get_sub_batch(self,fraction=2):
         """creates and yields subbatches of (1/fraction) of num_frames
 
@@ -129,7 +137,6 @@ class Wav2Mov(TemplateModel):
         Yields:
             sub_batch
         """
-
         num_frames = self.video.shape[1]
         start_fraction = 0
         for i in range(fraction):
@@ -137,14 +144,16 @@ class Wav2Mov(TemplateModel):
             batch = {}
             # self.logger.debug(f'inside sub batching with fraction {fraction} of {num_frames} frames| {start_fraction} : {end_fraction}')
             real_video_frames = self.video[:,start_fraction:end_fraction,:,:,:]
-            batch['real_video_frames']  = self.squeeze_frames(real_video_frames)
+            batch['real_video_frames'] = real_video_frames
             ref_video_frames = self.get_ref_frames(real_video_frames)
-            batch['ref_video_frames'] = self.squeeze_frames(ref_video_frames)
+            # self.logger.debug(f'inside get sub batch {ref_video_frames.shape},{real_video_frames.shape}')
+            # batch['ref_video_frames'] = self.squeeze_frames(ref_video_frames)
             
+            # audio_frames = self.squeeze_frames(audio_frames)
             audio_frames = self.audio_frames[:,start_fraction:end_fraction,:]
-            audio_frames = self.squeeze_frames(audio_frames)
             batch['fake_video_frames'] = self(audio_frames,batch['ref_video_frames']) 
-            self.add_fake_frames(batch['fake_video_frames'],target_shape=batch['real_video_frames'].shape)
+
+            self.add_fake_frames(batch['fake_video_frames'],target_shape=real_video_frames.shape)
             
             start_fraction = end_fraction
             yield batch

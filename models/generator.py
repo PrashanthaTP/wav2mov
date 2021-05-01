@@ -243,18 +243,24 @@ class NoiseGenerator(nn.Module):
     def __init__(self,hparams):
         super().__init__()
         self.device = hparams['device']
-        self.fc = nn.Sequential(
-            nn.Linear(100, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),#out dim is based on encoder part bottlenck of generator
-            nn.ReLU()
-            # nn.Linear(64, 28*28),
-            # nn.ReLU()
-        )
-
-    def forward(self,total_frames):
-        noise = torch.randn(total_frames, 100).to(self.device)
-        return self.fc(noise)  # shape (batch_size,28*28)
+        # self.fc = nn.Sequential(
+        #     nn.Linear(100, 128),
+        #     nn.ReLU(),
+        #     nn.Linear(128, 64),#out dim is based on encoder part bottlenck of generator
+        #     nn.ReLU()
+        #     # nn.Linear(64, 28*28),
+        #     # nn.ReLU()
+        # )
+        self.features_len = 8*8
+        self.gru = nn.GRU(input_size=self.features_len,
+                          hidden_size=100,
+                          num_layers=1,
+                          batch_first=True)
+        #input should be of shape batch_size,seq_len,input_size
+    def forward(self,batch_size,num_frames):
+        noise = torch.randn(batch_size,num_frames,self.features_len)
+        out,_ = self.gru(noise)
+        return out#(batch_size,seq_len,features)
 
 
 class GeneratorBW(BaseModel):
@@ -274,14 +280,22 @@ class GeneratorBW(BaseModel):
         init_net(self.noise_enc)
         init_net(self.identity_enc)
         
-    def forward(self, audio, frame_img):
-        # batch_size = audio.shape[0]
-        # print(f'inside gen forward audio : {audio.shape} frame image : {frame_img.shape}')
-        total_frames = audio.shape[0]
-        x = torch.cat([self.audio_enc(audio).reshape(-1, 1, 8, 8),
-                       self.noise_enc(total_frames).reshape(-1, 1, 8, 8)], dim=1)
-        # x = self.audio_enc(audio).reshape(-1,1,8,8)
-        return self.identity_enc(frame_img, x)
+    def _squeeze_batch_frames(self,target):
+        batch_size,num_frames,*extra = target.shape
+        return target.squeeze(batch_size*num_frames,*extra)
+
+    def forward(self, audio_frames, ref_video_frames):
+        #audio : B,F,Sw
+        #ref : B,F,C,H,W
+        batch_size,num_frames,_ = audio_frames.shape
+        _,_,*img_shape = ref_video_frames.shape
+        audio_frames = self._squeeze_batch_frames(audio_frames)
+        ref_video_frames = self._squeeze_batch_frames(ref_video_frames)
+
+        x = torch.cat([self.audio_enc(audio_frames).reshape(-1, 1, 8, 8),
+                       self.noise_enc(batch_size,num_frames).reshape(-1, 1, 8, 8)], dim=1)#channel wise
+        x = self.identity_enc(ref_video_frames, x)
+        return x.reshape(batch_size,num_frames,*img_shape)
 
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5, 0.999))

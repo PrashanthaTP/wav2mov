@@ -1,6 +1,6 @@
 from wav2mov.models.wav2mov import Wav2Mov 
 from wav2mov.main.engine import Engine
-from wav2mov.main.callbacks import LossMetersCallback,ModelCheckpoint,TimeTrackerCallback
+from wav2mov.main.callbacks import LossMetersCallback,ModelCheckpoint,TimeTrackerCallback,LoggingCallback
 
 from wav2mov.core.data.collates import get_batch_collate
 from wav2mov.main.data import get_dataloaders
@@ -16,6 +16,7 @@ def train_model(options,hparams,config,logger):
                                          collate_fn=collate_fn)
     callbacks = [LossMetersCallback(options,hparams,logger,
                                     verbose=True),
+                LoggingCallback(options,hparams,logger),
                  TimeTrackerCallback(hparams,logger),
                  ModelCheckpoint(model,hparams,config,
                                  save_every=5)]

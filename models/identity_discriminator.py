@@ -42,19 +42,34 @@ class IdentityDiscriminator(BaseModel):
         self.blocks = nn.ModuleList(nn.Sequential(nn.Conv2d(chs[i],chs[i+1],4,2,1),nn.ReLU()) for i in range(len(chs)-2))
         # blocks = [Block(chs[i],chs[i+1],4,2,1) for i in range(len(chs)-1)]
     
-        self.desc = nn.Sequential(*self.blocks, nn.Conv2d(chs[-2], chs[-1], 4, 2, 1))
-        
+        self.disc = nn.Sequential(*self.blocks, nn.Conv2d(chs[-2], chs[-1], 4, 2, 1))
+    
+    def _squeeze_batch_frames(self,target):
+        batch_size,num_frames,*extra = target.shape
+        return target.reshape(batch_size*num_frames,*extra)
     def forward(self,x,y):
         """
-        x : frame image 
+        x : frame image (B,F,H,W)
         y : still image
         """
-        x = torch.cat([x,y],dim=1)
+        assert x.shape==y.shape
+        is_frame_dim_present = False
+
+        if len(x.shape)>4:#frame dim present
+            is_frame_dim_present = True
+            batch_size,num_frames,*img_shape = x.shape
+            x = self._squeeze_batch_frames(x)
+            y = self._squeeze_batch_frames(y)
+        
+            
+        x = torch.cat([x,y],dim=1)#along channels
         # return self.desc(x)
         # for block in self.blocks:
         #     x = block(x)
         # return x.reshape(x.shape[0],-1)
-        return self.desc(x)
+        x = self.disc(x)
+        return x
+        return x if  not is_frame_dim_present else x.reshape(batch_size,num_frames,*img_shape)
     
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5,0.999))
