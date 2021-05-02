@@ -4,6 +4,9 @@ from wav2mov.core.engine.callbacks import Callbacks
 from wav2mov.logger import TensorLogger
 from wav2mov.utils.misc import AverageMetersList,ProgressMeter
 
+from wav2mov.logger import get_module_level_logger
+m_logger = get_module_level_logger(__name__)
+
 class TensorBoardCallback(Callbacks):
 
     def __init__(self,options,config):

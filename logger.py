@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from torch.utils.tensorboard.writer import SummaryWriter
 # logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=logging.ERROR,format="%(levelname)s : %(name)s : %(asctime)s | %(msg)s ")
+logging.basicConfig(level=logging.DEBUG,format="%(levelname)s : %(name)s : %(asctime)s | %(msg)s ")
 TIME_FORMAT = "%b %d,%Y %H:%M:%S"
 
 from pythonjsonlogger import jsonlogger
@@ -12,10 +12,14 @@ from pythonjsonlogger import jsonlogger
 
  
 def get_module_level_logger(name):
-    logger =  logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    logger.propagate = False
-    return logger
+    # logging.basicConfig(level=logging.DEBUG)
+    m_logger =  logging.getLogger(name)
+    m_logger.setLevel(logging.DEBUG)
+    m_logger.propagate = False
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(levelname)s : %(name)s : %(asctime)s | %(msg)s "))
+    m_logger.addHandler(handler)
+    return m_logger
 
 logger = get_module_level_logger(__name__)
 
