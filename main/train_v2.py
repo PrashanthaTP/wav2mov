@@ -16,7 +16,7 @@ def train_model(options,hparams,config,logger):
                                          collate_fn=collate_fn)
     callbacks = [LossMetersCallback(options,hparams,logger,
                                     verbose=True),
-                LoggingCallback(options,hparams,logger),
+                LoggingCallback(options,hparams,config,logger),
                  TimeTrackerCallback(hparams,logger),
                  ModelCheckpoint(model,hparams,config,
                                  save_every=5)]

@@ -148,13 +148,17 @@ class ModelCheckpoint(Callbacks):
         
         
 class LoggingCallback(Callbacks):
-    def __init__(self,options,hparams,logger) :
+    def __init__(self,options,hparams,config,logger) :
         self.options = options
         self.hparams = hparams
+        self.config = config
         self.logger = logger
     def on_run_start(self,state):
+        self.logger.info(f'[RUN] version {self.config.version}')
         accumulation_steps = self.hparams['data']['batch_size']//self.hparams['data']['mini_batch_size']
         num_batches = state.num_batches//accumulation_steps
         self.logger.debug(f'[DATALOADER] min_batch_size {self.hparams["data"]["mini_batch_size"]}')
         self.logger.debug(f'[DATALOADER] batch_size {self.hparams["data"]["batch_size"]}')
         self.logger.debug(f'[DATALOADER] total batches {num_batches}')
+        
+        self.logger.debug(f'[RUN] num_epochs : {self.hparams["num_epochs"]} | pre_learning_epochs : {self.hparams["pre_learning_epochs"]}')

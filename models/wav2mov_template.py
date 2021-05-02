@@ -1,10 +1,13 @@
 
 import os
+
 import torch
 from torch.cuda import amp
 from torch.optim.lr_scheduler import StepLR
+# from torchvision import transforms as vtransforms
 
 from wav2mov.core.models.template import TemplateModel
+
 from wav2mov.models.generator import Generator, GeneratorBW
 from wav2mov.models.sequence_discriminator import SequenceDiscriminator, SequenceDiscriminatorCNN
 from wav2mov.models.identity_discriminator import IdentityDiscriminator
@@ -12,6 +15,7 @@ from wav2mov.models.patch_disc import PatchDiscriminator
 from wav2mov.models.sync_discriminator import SyncDiscriminator
 from wav2mov.models.utils import init_net
 from wav2mov.losses import GANLoss,SyncLoss,L1_Loss
+
 
 
 class Wav2MovTemplate(TemplateModel):
@@ -79,8 +83,16 @@ class Wav2MovTemplate(TemplateModel):
             
     def forward(self,audio_frames,ref_video_frames):
         # self.logger.debug(f'inside wav2movtemplate forward {audio_frames.shape} {ref_video_frames.shape}')
-        return self.gen(audio_frames,ref_video_frames)
-    
+        with amp.autocast():
+          return self.gen(audio_frames,ref_video_frames)
+
+    def clear_input(self):
+      self.audio_seq = None
+      self.ref_video_frames = None
+      self.real_video_frames = None
+      self.fake_video_frames = None
+      self.audio_seq_out_of_sync = None
+
     def set_input(self,batch:dict):
         # self.audio_frames = batch.get('audio_frames')
         self.audio_seq = batch.get('audio_seq')#used by sync
@@ -95,31 +107,40 @@ class Wav2MovTemplate(TemplateModel):
         
     def backward_id(self):
         with amp.autocast():
-            disc_out = self.id_disc(self.real_video_frames,self.ref_video_frames)
-            loss_id = self.criterion_gan(disc_out,is_real_target=True)/2
+            disc_out = self.id_disc(self.real_video_frames,
+                            self.ref_video_frames)
+            loss_id = self.criterion_gan(disc_out,
+                                      is_real_target=True)/2
             disc_out = self.id_disc(self.fake_video_frames.detach(),
                                     self.ref_video_frames)
-            loss_id += self.criterion_gan(disc_out, is_real_target=False)/2
+            loss_id += self.criterion_gan(disc_out, 
+                                          is_real_target=False)/2
+
             loss_ret = loss_id.item()
             loss_id /= self.accumulation_steps
+
         self.scaler.scale(loss_id).backward()
         return {'id':(loss_ret,self.real_video_frames.shape[0])}
 
-    def backward_sync(self,exclude_fake=False):
-        scale =  2 if exclude_fake else 3
+    def backward_sync(self,adversarial=False):
+        scale =  3 if adversarial else 2
         with amp.autocast():
-            disc_out = self.sync_disc(self.audio_seq,self.real_video_frames)
+            disc_out = self.sync_disc(self.audio_seq,
+                                      self.real_video_frames)
             
             loss_sync = self.criterion_sync(*disc_out,
                                            is_real_target=True)/scale
             
-            disc_out = self.sync_disc(self.audio_seq_out_of_sync,self.real_video_frames)
+            disc_out = self.sync_disc(self.audio_seq_out_of_sync,
+                                      self.real_video_frames)
     
             loss_sync += self.criterion_sync(*disc_out,
                                             is_real_target=False)/scale
             
-            if not exclude_fake: 
-                disc_out = self.sync_disc(self.audio_seq,self.fake_video_frames.detach())
+            if adversarial: 
+                # self.logger.debug(f'line 143 {self.audio_seq.shape} {self.fake_video_frames.shape}')
+                disc_out = self.sync_disc(self.audio_seq,
+                                          self.fake_video_frames.detach())
                 loss_sync += self.criterion_sync(*disc_out,
                                                 is_real_target=False)/scale
                 
@@ -128,26 +149,27 @@ class Wav2MovTemplate(TemplateModel):
         self.scaler.scale(loss_sync).backward()
         return {'sync':(loss_ret,self.audio_seq.shape[0])}
 
-    def backward_seq(self,exclude_fake=False):
+    def backward_seq(self,adversarial=False):
         scale = 1 if exclude_fake else 2
         with amp.autocast():
             disc_out = self.seq_disc(self.real_video_frames)
             loss_seq = self.criterion_gan(disc_out, is_real_target=True)/scale
-            if not exclude_fake:
-                disc_out = self.seq_disc(self.fake_video_frames)
+            if adversarial:
+                disc_out = self.seq_disc(self.fake_video_frames.detach())
                 loss_seq += self.criterion_gan(disc_out, is_real_target=False)/scale
             ret_loss = loss_seq.item()
             loss_seq /= self.accumulation_steps
         self.scaler.scale(loss_seq).backward()
         return {'seq':(ret_loss,self.real_video_frames.shape[0])}
 
-    def backward_gen_id(self):
+    def backward_gen_id(self,adversarial):
         with amp.autocast():
          
             ##################################
             # ID discriminator
             ##################################
-            id_disc_out = self.id_disc(self.fake_video_frames,self.ref_video_frames)
+            id_disc_out = self.id_disc(self.fake_video_frames,
+                                        self.ref_video_frames)
 
             loss_gen = self.criterion_gan(id_disc_out,
                                            is_real_target=True) * self.hparams['scales']['lambda_id_disc']
@@ -163,7 +185,10 @@ class Wav2MovTemplate(TemplateModel):
             
             
             loss_gen /= self.accumulation_steps
-        self.scaler.scale(loss_gen).backward()
+        # if return_orig_loss:
+        #   return loss_ret,loss_gen
+
+        self.scaler.scale(loss_gen).backward(retain_graph=adversarial)
         return loss_ret
 
     def backward_gen_sync(self):
@@ -171,13 +196,16 @@ class Wav2MovTemplate(TemplateModel):
             ##################################
             # SYNC discriminator
             ##################################
-            sync_disc_out = self.sync_disc(self.audio_seq,self.fake_video_frames)
+            sync_disc_out = self.sync_disc(self.audio_seq,
+                                        self.fake_video_frames)
 
             loss_gen = self.criterion_sync(*sync_disc_out,
                                           is_real_target=True)*self.hparams['scales']['lambda_sync_disc']
 
             loss_ret = loss_gen.item()
             loss_gen /= self.accumulation_steps
+        # if return_orig_loss:
+        #   return loss_ret,loss_gen
         self.scaler.scale(loss_gen).backward()
         return {'gen' : (loss_ret,self.audio_seq.shape[0])}
 
@@ -204,30 +232,107 @@ class Wav2MovTemplate(TemplateModel):
         # self.optim_seq_disc.zero_grad(set_to_none=True)
       
         self.scaler.update()
-        
-    def optimize_id(self):
+
+    def step_id(self):
+      self.scaler.step(self.optim_id_disc)
+      self.optim_id_disc.zero_grad(set_to_none=True)
+
+    def step_sync(self):
+      self.scaler.step(self.optim_sync_disc)
+      self.optim_sync_disc.zero_grad(set_to_none=True)
+  
+    def step_seq(self):
+      self.scaler.step(self.optim_seq_disc)
+      self.optim_seq_disc.zero_grad(set_to_none=True)
+  
+    def step_gen(self):
+      self.scaler.step(self.optim_gen)
+      self.optim_gen.zero_grad(set_to_none=True)
+
+    def update_scale(self):
+      self.scaler.update()
+    
+
+    def optimize_id(self,adversarial):
         losses = {}
         losses_id = self.backward_id()
-        losses_gen = self.backward_gen_id()
+        losses_gen = self.backward_gen_id(adversarial)
         losses = {**losses_id,**losses_gen}
+        self.clear_input()
         return losses
     
-    def optimize_sync(self,exclude_fake):
+    def optimize_sync(self,adversarial):
         losses = {}
-        losses = {**losses,**self.backward_sync(exclude_fake)}
-        if exclude_fake:
-            return losses
-        losses = {**losses,**self.backward_gen_sync()}
+        losses = {**losses,**self.backward_sync(adversarial)}
+        if adversarial:
+          losses = {**losses,**self.backward_gen_sync()}
+        self.clear_input()
         return losses
             
-    def optimize_seq(self,exclude_fake):
+    def optimize_seq(self,adversarial):
         losses = {}
-        losses = {**losses,**self.backward_seq(exclude_fake)}
-        if exclude_fake:
-            return losses
-        losses = {**losses,**self.backward_gen_seq()}
+        losses = {**losses,**self.backward_seq(adversarial)}
+        if adversarial:
+            losses = {**losses,**self.backward_gen_seq()}
+        self.clear_input()
         return losses
-        
+    
+    def optimize_discs(self,adversarial_with_seq_sync=False):
+        loss_id = self.backward_id()
+        loss_sync = self.backward_sync(adversarial=adversarial_with_seq_sync)
+        #loss_seq = self.backward_seq()
+        return {**loss_id,**loss_sync}
+
+    def optimize_gen(self,adversarial_with_seq_sync=False):
+      loss_ret = {}
+      with amp.autocast():
+          # def backward_gen_id():
+          ##################################
+          # ID discriminator
+          ##################################
+          id_disc_out = self.id_disc(self.fake_video_frames,
+                                      self.ref_video_frames)
+
+          loss_gen = self.criterion_gan(id_disc_out,
+                                        is_real_target=True) * self.hparams['scales']['lambda_id_disc']
+
+          ##################################
+          # L1 Criterion
+          ##################################
+          loss_l1 = self.criterion_L1(self.fake_video_frames,
+                                      self.real_video_frames)*self.hparams['scales']['lambda_L1']
+
+          loss_ret['l1'] = (loss_l1.item(),self.fake_video_frames.shape[0])
+
+          loss_gen += loss_l1
+
+          if adversarial_with_seq_sync:
+            # def backward_gen_sync():
+            ##################################
+            # SYNC discriminator
+            ##################################
+            sync_disc_out = self.sync_disc(self.audio_seq,
+                                        self.fake_video_frames)
+
+            loss_gen += self.criterion_sync(*sync_disc_out,
+                                          is_real_target=True)*self.hparams['scales']['lambda_sync_disc']
+
+      
+            # def backward_gen_seq():
+            # #################################
+            # # SEQ discriminator
+            # #################################
+            # seq_disc_out = self.seq_disc(self.fake_video_frames)
+            
+            # loss_gen += self.criterion_gan(seq_disc_out,
+            #                               is_real_target=True)*self.hparams['scales']['lambda_seq_disc']
+
+          loss_ret['gen'] = (loss_gen.item(),self.fake_video_frames.shape[0])
+          loss_gen /= self.accumulation_steps
+
+      self.scaler.scale(loss_gen).backward()
+      return loss_ret
+
     
     def save_state_dict(self,name,checkpoint,**kwargs):
         entity = getattr(self,name)
@@ -301,4 +406,3 @@ class Wav2MovTemplate(TemplateModel):
             return torch.load(pt_file % {'model_name': 'gen'})['epoch']
         except Exception as e:
             self.logger.exception(e)
-     

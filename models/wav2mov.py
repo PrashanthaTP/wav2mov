@@ -2,14 +2,18 @@
 Supports BATCHING  
 audio windowing with coarticulation factor and lr scheduling(new version)
 """
+import os
 import random
 
 import torch
+
+# from torchvision import transforms as vtransforms
+
 from wav2mov.core.models.template import TemplateModel
-from wav2mov.models.wav2mov_template import Wav2MovTemplate
 
 from wav2mov.core.data.utils import AudioUtil
-# from torchvision import transforms as vtransforms
+
+from wav2mov.models.wav2mov_template import Wav2MovTemplate
 # def process_video(video,hparams):
 #     img_channels = hparams['img_channels']
 #     img_size = hparams['img_size']
@@ -82,26 +86,53 @@ class Wav2Mov(TemplateModel):
         return item.reshape(batch_size*num_frames,*extra)
         
     def get_ref_frames(self,video):
-        REF_FRAME_IDX = self.hparams['ref_frame_idx']
+        # REF_FRAME_IDX = self.hparams['ref_frame_idx']
         # batch_size,num_frames,channels,height,width = video.shape
         num_frames = video.shape[1]
-        ref_frames = video[:,REF_FRAME_IDX,:,:,:]#shape is B,F,C,H,W
+        REF_FRAME_IDX = int(num_frames*0.6)
+        ref_frames = video[:,REF_FRAME_IDX,:,:,:]#shape is B,F,C,H,W-->B,C,H,W
+        ref_frames = ref_frames.unsqueeze(1)#B,1,C,H,W
+        # self.logger.debug(f'inside get_ref_frames 1: {ref_frames.shape} {num_frames}')
         ref_frames = ref_frames.repeat(1,num_frames,1,1,1)
+        # self.logger.debug(f'inside get_ref_frames 2: {ref_frames.shape}')
         # ref_frames = ref_frames.reshape(batch_size*num_frames,channels,height,width)
         return ref_frames
     
     def add_fake_frames(self,frames,target_shape):
         batch_size,num_frames,*extra = target_shape
-        frames = frames.reshape(batch_size,num_frames,*extra)#from B*F,C,H,W to B,F,C,H,W
+        # frames = frames.reshape(batch_size,num_frames,*extra)#from B*F,C,H,W to B,F,C,H,W
         fake_frames = [self.fake_video_frames,frames] if self.fake_video_frames is not None else [frames]
+        # self.logger.debug(f'line no 396 | frames {frames.shape} target shape {batch_size,num_frames}{extra} ')
         self.fake_video_frames = torch.cat(fake_frames,dim=1)
-
+    
     def swap_channel_frame_axes(self,video):
       return video.permute(0,2,1,3,4)#B,F,C,H,W to B,C,F,H,W
 
-    def get_sub_seq(self):
+    def re_gen(self,fraction):
+      # self.logger.debug(f'line 503 fake_video_frames : {self.fake_video_frames.shape}')
+      self.fake_video_frames = None
+      # self.logger.debug(f'line 475 fake_video_frames cleared ')
+      num_frames = self.video.shape[1]
+      start_fraction = 0
+      for i in range(fraction):
+          end_fraction = int((1/fraction)*(i+1)*num_frames) if i!=fraction-1 else num_frames
+          batch = {}
+          # self.logger.debug(f'inside sub batching with fraction {fraction} of {num_frames} frames| {start_fraction} : {end_fraction}')
+          batch['real_video_frames'] = self.video[:,start_fraction:end_fraction,:,:,:]
+          # batch['real_video_frames']  = self.squeeze_frames(real_video_frames)
+          batch['ref_video_frames'] = self.get_ref_frames(batch['real_video_frames'])
+          # batch['ref_video_frames'] = self.squeeze_frames(ref_video_frames)
+
+          audio_frames = self.audio_frames[:,start_fraction:end_fraction,:]
+          # audio_frames = self.squeeze_frames(audio_frames)
+          batch['fake_video_frames'] = self(audio_frames,batch['ref_video_frames']) 
+          self.add_fake_frames(batch['fake_video_frames'],target_shape=batch['real_video_frames'].shape)
+          
+          start_fraction = end_fraction
+
+    def get_sub_seq(self,do_re_gen=False,fraction=None):
         """ return smaller set of frames from audio,real_video_frames,fake_video_frames"""
-           
+     
         ret = {}
       
 
@@ -127,7 +158,7 @@ class Wav2Mov(TemplateModel):
         ret['audio_seq_out_of_sync'] = self.audio_util.get_limited_audio(self.audio,NUM_FRAMES_FOR_SYNC,start_frame=randpos+OFFSET_SYNC_OUT_OF_SYNC)
         
         return ret
-    
+           
     def __get_sub_batch(self,fraction=2):
         """creates and yields subbatches of (1/fraction) of num_frames
 
@@ -137,6 +168,7 @@ class Wav2Mov(TemplateModel):
         Yields:
             sub_batch
         """
+
         num_frames = self.video.shape[1]
         start_fraction = 0
         for i in range(fraction):
@@ -158,30 +190,38 @@ class Wav2Mov(TemplateModel):
             start_fraction = end_fraction
             yield batch
             
-    def __optimize(self,exclude_fake):     
+    def __optimize(self,adversarial):     
+        self.fake_video_frames = None
+        self.fake_video_frames_c = None
+        FRACTION =5
         losses = {'gen':(0.0,0),
                   'id':(0.0,0),
                   'l1':(0.0,0),
                   'sync':(0.0,0),
                   'seq':(0.0,0)}       
-        for sub_batch in self.__get_sub_batch(fraction=2):
+        for sub_batch in self.__get_sub_batch(fraction=FRACTION):
             self.model.set_input(sub_batch)
-            loss_id = self.model.optimize_id()
+            loss_id = self.model.optimize_id(adversarial=False)
+            # self.logger.debug(f'wav2mov 456 {loss_id}')
             for name,(loss,n) in loss_id.items():
                 prev_loss,prev_n = losses.get(name,(0.0,0))
                 loss_id[name] = (prev_loss+loss,prev_n+n)
-        
-        self.model.set_input(self.get_sub_seq())
-        loss_sync = self.model.optimize_sync(exclude_fake)
+
+        self.model.step_id()
+        self.model.set_input(self.get_sub_seq(do_re_gen=adversarial,fraction=FRACTION))
+        loss_sync = self.model.optimize_sync(adversarial)
+        self.model.step_sync()
+        self.model.update_scale()
         losses = {**losses,**loss_id,**loss_sync}
         return losses
              
     def optimize(self,state):
         epoch = state.epoch
         batch_idx = state.epoch
-        losses = self.__optimize(exclude_fake=epoch<self.hparams['pre_learning_epochs'])
-        if (batch_idx+1)%self.accumulation_steps:
-            self.model.step()
+        losses = self.__optimize(adversarial=epoch>=self.hparams['pre_learning_epochs'])
+        
+        # if (batch_idx+1)%self.accumulation_steps:
+        #     self.model.step()
         return losses
-
-
+    def on_run_end(self,state):
+      self.logger.debug(str(self))
