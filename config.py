@@ -2,14 +2,10 @@
 import json
 import os
 import re
-import logging 
 from datetime import datetime
-
-logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.DEBUG)
-logger.setLevel(logging.DEBUG)
+from wav2mov.logger import get_module_level_logger
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
+logger = get_module_level_logger(__name__)
 def get_curr_run_str():
     now = datetime.now()
     date,time = now.date(),now.time()

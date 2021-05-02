@@ -1,11 +1,8 @@
 import json 
 import os 
-import logging 
-logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.DEBUG)
-logger.setLevel(logging.DEBUG)
 from wav2mov.settings import BASE_DIR
-
+from wav2mov.logger import get_module_level_logger
+logger = get_module_level_logger(__name__)
 class Params:
     def __init__(self):
         self.vals = {}

@@ -1,26 +1,22 @@
+
+from torch.functional import Tensor
 import torch
-import logging 
-logger = logging.getLogger(__file__)
-logger.setLevel(logging.DEBUG)
 import os
-# import dlib
 import wave
 from moviepy.editor import AudioFileClip
-import numpy as np
-
-
 import cv2 
 import librosa 
 import imutils  # for image resizing
-from imutils import face_utils
-
 from collections import namedtuple
 
-from torch.functional import Tensor
 
+
+from wav2mov.core.utils.logger import get_module_level_logger
+logger = get_module_level_logger(__name__)
 
 Sample = namedtuple('Sample', ['audio', 'video'])
 SampleWithFrames = namedtuple('SampleWithFrames',['audio','audio_frames','video'])
+
 
 def get_video_frames(video_path,img_size):
     try:

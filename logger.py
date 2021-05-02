@@ -4,14 +4,22 @@ import re
 from datetime import datetime
 from torch.utils.tensorboard.writer import SummaryWriter
 # logging.basicConfig(level=logging.DEBUG)
-# logging.basicConfig(level=logging.ERROR)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.propagate =  False
+logging.basicConfig(level=logging.ERROR,format="%(levelname)s : %(name)s : %(asctime)s | %(msg)s ")
 TIME_FORMAT = "%b %d,%Y %H:%M:%S"
 
 from pythonjsonlogger import jsonlogger
 
+
+ 
+def get_module_level_logger(name):
+    logger =  logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
+    return logger
+
+logger = get_module_level_logger(__name__)
+
+ 
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def add_fields(self,log_record,record,message_dict):
         # print(log_record,vars(record),message_dict)
@@ -55,9 +63,6 @@ class TensorLogger:
         for writer_name,(tag,scalar) in d.items():
             self.add_scalar(writer_name,tag,scalar,global_step)
             
-            
-
-    
     
 class Logger:
     def __init__(self, name):

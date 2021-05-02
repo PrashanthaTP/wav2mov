@@ -1,9 +1,6 @@
-import logging
-logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.WARNING)
-logger.setLevel(logging.DEBUG)
-from .callbacks import CallbackEvents,CallbackDispatcher
-
+from wav2mov.core.engine.callbacks import CallbackEvents,CallbackDispatcher
+from wav2mov.core.utils.logger import get_module_level_logger
+logger = get_module_level_logger(__name__)
 
 class TemplateEngine:
 
@@ -53,7 +50,7 @@ class TemplateEngine:
         """
         print("[TEMPLATE ENGINE] 'run' function not implemented")
         pass
-    def run(self,*args,**kwargs):
+    def test(self,*args,**kwargs):
         """
         test script goes here  
         """
