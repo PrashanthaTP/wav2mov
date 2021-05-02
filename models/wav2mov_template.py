@@ -233,15 +233,15 @@ class Wav2MovTemplate(TemplateModel):
       
         self.scaler.update()
 
-    def step_id(self):
+    def step_id_disc(self):
       self.scaler.step(self.optim_id_disc)
       self.optim_id_disc.zero_grad(set_to_none=True)
 
-    def step_sync(self):
+    def step_sync_disc(self):
       self.scaler.step(self.optim_sync_disc)
       self.optim_sync_disc.zero_grad(set_to_none=True)
   
-    def step_seq(self):
+    def step_seq_disc(self):
       self.scaler.step(self.optim_seq_disc)
       self.optim_seq_disc.zero_grad(set_to_none=True)
   

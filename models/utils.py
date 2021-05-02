@@ -1,12 +1,10 @@
 """ src : https://github1s.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/models/networks.py """
-import logging
 
 from torch.nn import init
 
+from wav2mov.logger import get_module_level_logger
+logger = get_module_level_logger(__name__)
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.propagate = False
 def init_weights(net, init_type='normal', init_gain=0.02):
     """Initialize network weights.
 

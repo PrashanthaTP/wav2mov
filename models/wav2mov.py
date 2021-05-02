@@ -59,7 +59,7 @@ class Wav2Mov(TemplateModel):
         self.model.save(*args,**kwargs)
         
     def load(self,*args,**kwargs):
-        self.model.load(*args,**kwargs)
+        return self.model.load(*args,**kwargs)
         
     def to_device(self,*args):
         return [arg.to(self.device) for arg in args]
@@ -201,20 +201,36 @@ class Wav2Mov(TemplateModel):
                   'seq':(0.0,0)}       
         for sub_batch in self.__get_sub_batch(fraction=FRACTION):
             self.model.set_input(sub_batch)
-            loss_id = self.model.optimize_id(adversarial=False)
+            loss_id_dict = self.model.optimize_id(adversarial=False)
             # self.logger.debug(f'wav2mov 456 {loss_id}')
-            for name,(loss,n) in loss_id.items():
-                prev_loss,prev_n = losses.get(name,(0.0,0))
-                loss_id[name] = (prev_loss+loss,prev_n+n)
+            # for name,(loss,n) in loss_id.items():
+            #     prev_loss,prev_n = losses.get(name,(0.0,0))
+            #     loss_id[name] = (prev_loss+loss,prev_n+n)
+            losses = self._merge_losses(losses,loss_id_dict)
 
-        self.model.step_id()
+        self.model.step_id_disc()
+        # self.model.step_gen()#because RuntimeError: step() has already been called since the last update().in next step_gen()
+        
         self.model.set_input(self.get_sub_seq(do_re_gen=adversarial,fraction=FRACTION))
-        loss_sync = self.model.optimize_sync(adversarial)
-        self.model.step_sync()
+        loss_sync_dict = self.model.optimize_sync(adversarial)
+        losses = self._merge_losses(losses,loss_sync_dict)
+        
+        self.model.step_sync_disc()
+        self.model.step_gen()
+        
         self.model.update_scale()
-        losses = {**losses,**loss_id,**loss_sync}
+
+        # losses = {**losses,**loss_id,**loss_sync}
         return losses
-             
+    def _merge_losses(self,*loss_dicts):
+        merged_losses = {}
+        for loss_dict in loss_dicts:
+            for key,(loss,n) in loss_dict.items():
+                merged_losses[key] = merged_losses.get(key,(0.0,0))
+                prev_loss,prev_n = merged_losses[key]
+                merged_losses[key] = (prev_loss+loss,prev_n+n)
+        return merged_losses
+                
     def optimize(self,state):
         epoch = state.epoch
         batch_idx = state.epoch
