@@ -6,6 +6,7 @@
 	"num_epochs": 4,
 	"pre_learning_epochs":10,
 	"img_channels": 1,
+	"num_frames_fraction":10,
 	"data": {
 		"img_size":256,
 		"img_channels":1,
