@@ -3,8 +3,8 @@ import os
 import re
 from datetime import datetime
 from torch.utils.tensorboard.writer import SummaryWriter
-# logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=logging.DEBUG,format="%(levelname)s : %(name)s : %(asctime)s | %(msg)s ")
+
+logging.basicConfig(level=logging.ERROR,format="%(levelname)-5s : %(name)s : %(asctime)s | %(msg)s ")
 TIME_FORMAT = "%b %d,%Y %H:%M:%S"
 
 from pythonjsonlogger import jsonlogger
@@ -12,18 +12,17 @@ from pythonjsonlogger import jsonlogger
 
  
 def get_module_level_logger(name):
-    # logging.basicConfig(level=logging.DEBUG)
     m_logger =  logging.getLogger(name)
     m_logger.setLevel(logging.DEBUG)
     m_logger.propagate = False
     handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("%(levelname)s : %(name)s : %(asctime)s | %(msg)s "))
+    handler.setFormatter(logging.Formatter("%(levelname)-5s : %(name)s : %(asctime)s | %(msg)s "))
     m_logger.addHandler(handler)
     return m_logger
 
-logger = get_module_level_logger(__name__)
 
- 
+
+
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def add_fields(self,log_record,record,message_dict):
         # print(log_record,vars(record),message_dict)
@@ -67,14 +66,17 @@ class TensorLogger:
         for writer_name,(tag,scalar) in d.items():
             self.add_scalar(writer_name,tag,scalar,global_step)
             
+            
+
+    
     
 class Logger:
     def __init__(self, name):
         self.log_fullpath = None
         self.name = name
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.DEBUG)
         self.logger.propagate = False
+        self.logger.setLevel(logging.DEBUG)
         self.is_json = False
         self.is_first_log = True
         
@@ -106,7 +108,7 @@ class Logger:
     def add_filehandler(self, log_fullpath, fmt:str=None,in_json=False):
         self.log_fullpath = log_fullpath
         if fmt is None:
-            fmt = '[%(levelname)s] %(filename)s :  %(asctime)s : line no: %(lineno)d : %(message)s'
+            fmt = '%(levelname)-5s : %(filename)s :  %(asctime)s : line no: %(lineno)d : %(message)s'
         if in_json:
             self.is_json = True
             folder = os.path.dirname(self.log_fullpath)
@@ -127,7 +129,7 @@ class Logger:
 
     def add_console_handler(self, fmt: str = None):
         if fmt is None:
-            fmt = "[%(levelname)s] %(filename)s :  %(asctime)s : line no: %(lineno)d : %(message)s"
+            fmt = "%(levelname)-5s : %(filename)s :  %(asctime)s : line no: %(lineno)d : %(message)s"
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(self.__get_formatter(fmt))
         self.__add_handler(console_handler)
