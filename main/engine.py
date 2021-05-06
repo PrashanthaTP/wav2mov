@@ -20,7 +20,7 @@ class Engine(TemplateEngine):
         super().__init__()
         self.logger = logger
         self.configure(options,hparams,config)
-        self.state = State(['num_batches','epoch','batch_idx','start_epoch','logs'])
+        self.state = State(['num_batches','cur_batch_size','epoch','batch_idx','start_epoch','logs'])
     
         
     def configure(self,options,hparams,config):
@@ -68,6 +68,7 @@ class Engine(TemplateEngine):
             self.dispatch(Events.EPOCH_START)
             for batch_idx,batch in enumerate(train_dl):
                 self.state.batch_idx = batch_idx
+                self.state.cur_batch_size = batch[0].shape[0] #makes the system tight coupled though!?
                 self.dispatch(Events.BATCH_START)
                 model.setup_input(batch,state=self.state)
                 logs = model.optimize(state=self.state)

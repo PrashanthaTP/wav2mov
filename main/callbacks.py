@@ -71,9 +71,11 @@ class LossMetersCallback(Callbacks):
         
     def on_batch_end(self,state):
         batch_idx = state.batch_idx
+        batch_size = state.cur_batch_size
         if (batch_idx+1)%self.accumulation_steps == 0:
             self.batch_loss_meter.update(state.logs)
-            self.epoch_loss_meter.update(self.batch_loss_meter.average())
+            batch_avg_loss = self.batch_loss_meter.average()
+            self.epoch_loss_meter.update(self.update_with_multiplier(batch_avg_loss,batch_size))
             if self.verbose:
                 self.logger.info(self.batch_progress_meter.get_display_str(batch_idx+1))
                 
@@ -88,13 +90,13 @@ class LossMetersCallback(Callbacks):
     
 
     def update_with_multiplier(self,losses,multiplier):
-      updated = {}
-      for name,value in losses.items():
-        if isinstance(value,tuple):
-          updated[name] = value
-        else:
-          updated[name] = (value,multiplier)
-      return updated
+        updated = {}
+        for name,value in losses.items():
+            if isinstance(value,tuple):
+                updated[name] = value
+            else:
+                updated[name] = (value,multiplier)
+        return updated
 
 class TimeTrackerCallback(Callbacks):
     def __init__(self,hparams,logger):
