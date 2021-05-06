@@ -83,6 +83,6 @@ class Wav2movInferencer(TemplateModel):
             ref_video_frames_sample = ref_video_frames[:,start_frame:end_frame,...]
             fake_video_frames.append(self(audio_frames_sample,ref_video_frames_sample))
             
-        return torch.cat([fake_video_frames])
+        return torch.cat([fake_video_frames],dim=1)
         
         
