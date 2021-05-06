@@ -6,7 +6,7 @@ from torch.nn import functional as F
 from torchvision import transforms as vtransforms
 
 from wav2mov.core.models.base_model import BaseModel
-from wav2mov.models.utils import init_net
+from wav2mov.models.utils import init_net,squeeze_batch_frames
 
 class DoubleConvBlock(nn.Module):
     """
@@ -181,6 +181,7 @@ class Generator(BaseModel):
                                   nn.Tanh())  # ((388-3)/1)+1 = 385
 
     def forward(self, frame_img, audio_noise):
+        frame_img = squeeze_batch_frames(frame_img)#self.encoder is full of 3d cnn,but frame imgs is video having frame_num as second dim
         enc_filters = self.encoder(frame_img)
         # channel wise catenation
         # print(audio_noise.shape,enc_filters[::-1][0].shape)
@@ -214,23 +215,31 @@ class AudioEnocoder(nn.Module):
             nn.Conv1d(64, 128, 3, 1,bias=use_bias),#((101-3+0)/1)+1 =98
             nn.InstanceNorm1d(128),
             nn.ReLU(),
-            nn.Conv1d(128, 256,4,2,1),#((98-4+2)/2)+1 = 48 +1 = 49
+            nn.Conv1d(128, 1,4,2,1),#((98-4+2)/2)+1 = 48 +1 = 49
             nn.ReLU(),
         
         
             )
-        self.audio_fc = nn.Sequential(nn.Linear(49*256,5*256),
-                                      nn.ReLU(),
-                                      nn.Linear(5*256,64),
-                                      nn.ReLU())
-
+        # self.audio_fc = nn.Sequential(nn.Linear(49*256,5*256),
+        #                               nn.ReLU(),
+        #                               nn.Linear(5*256,64),
+        #                               nn.ReLU())
+        self.features_len = 49#out of conv layers
+        self.num_layers = 1
+        self.hidden_size = 8*8
+        self.gru = nn.GRU(input_size=self.features_len,
+                          hidden_size=self.hidden_size,
+                          num_layers=1,
+                          batch_first=True)            
     def forward(self, x):
         # print(x.shape) 
-        x = x.reshape(x.shape[0], 1, -1)
-        x = self.conv(x)
+        batch_size,num_frames,features = x.shape
+        x = self.conv(squeeze_batch_frames(x).unsqueeze(1))
         # print(x.shape) #=> (1,1,74)
-        x = self.audio_fc(x.reshape(x.shape[0], -1))
-  
+        # x = self.audio_fc(x.reshape(x.shape[0], -1))
+        x.reshape(batch_size,num_frames,self.features_len)
+        x,_ = self.gru(x)
+        #B,seq_len,hidden_size
         return x  # shape (batch_size,8*8)
 
 
@@ -261,7 +270,7 @@ class NoiseGenerator(nn.Module):
     def forward(self,batch_size,num_frames):
         noise = torch.randn(batch_size,num_frames,self.features_len,device=self.device)
         out,_ = self.gru(noise)
-        return out#(batch_size,seq_len,features)
+        return out#(batch_size,seq_len,hidden_size)
 
 
 class GeneratorBW(BaseModel):
@@ -281,17 +290,14 @@ class GeneratorBW(BaseModel):
         init_net(self.noise_enc)
         init_net(self.identity_enc)
         
-    def _squeeze_batch_frames(self,target):
-        batch_size,num_frames,*extra = target.shape
-        return target.reshape(batch_size*num_frames,*extra)
 
     def forward(self, audio_frames, ref_video_frames):
         #audio : B,F,Sw
         #ref : B,F,C,H,W
         batch_size,num_frames,_ = audio_frames.shape
         _,_,*img_shape = ref_video_frames.shape
-        audio_frames = self._squeeze_batch_frames(audio_frames)
-        ref_video_frames = self._squeeze_batch_frames(ref_video_frames)
+        # audio_frames = squeeze_batch_frames(audio_frames)
+        # ref_video_frames = squeeze_batch_frames(ref_video_frames)
 
         x = torch.cat([self.audio_enc(audio_frames).reshape(-1, 1, 8, 8),
                        self.noise_enc(batch_size,num_frames).reshape(-1, 1, 8, 8)], dim=1)#channel wise

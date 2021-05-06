@@ -55,3 +55,8 @@ def init_net(net, init_type='normal', init_gain=0.02):
     
     init_weights(net, init_type, init_gain=init_gain)
     return net
+
+
+def squeeze_batch_frames(target):
+    batch_size,num_frames,*extra = target.shape
+    return target.reshape(batch_size*num_frames,*extra)

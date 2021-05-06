@@ -3,7 +3,7 @@ from torch import nn,optim
 from torch.nn import functional as F
 
 from wav2mov.core.models.base_model import BaseModel
-from wav2mov.models.utils import init_net
+from wav2mov.models.utils import init_net,squeeze_batch_frames
 
 class Block(nn.Module):
     def __init__(self,in_ch,out_ch,kernel,stride,padding,is_final_layer=False):
@@ -44,9 +44,6 @@ class IdentityDiscriminator(BaseModel):
     
         self.disc = nn.Sequential(*self.blocks, nn.Conv2d(chs[-2], chs[-1], 4, 2, 1))
     
-    def _squeeze_batch_frames(self,target):
-        batch_size,num_frames,*extra = target.shape
-        return target.reshape(batch_size*num_frames,*extra)
     def forward(self,x,y):
         """
         x : frame image (B,F,H,W)
@@ -58,8 +55,8 @@ class IdentityDiscriminator(BaseModel):
         if len(x.shape)>4:#frame dim present
             is_frame_dim_present = True
             batch_size,num_frames,*img_shape = x.shape
-            x = self._squeeze_batch_frames(x)
-            y = self._squeeze_batch_frames(y)
+            x = squeeze_batch_frames(x)
+            y = squeeze_batch_frames(y)
         
             
         x = torch.cat([x,y],dim=1)#along channels
@@ -69,7 +66,7 @@ class IdentityDiscriminator(BaseModel):
         # return x.reshape(x.shape[0],-1)
         x = self.disc(x)
         return x
-        return x if  not is_frame_dim_present else x.reshape(batch_size,num_frames,*img_shape)
+        # return x if  not is_frame_dim_present else x.reshape(batch_size,num_frames,*img_shape)
     
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5,0.999))
