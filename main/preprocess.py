@@ -37,7 +37,7 @@ def create(raw_dataset: RawDataset,config) -> str:
     dataset_dir = config['train_test_dataset_dir']
     filenames = []
     
-    for sample in raw_dataset.generator(get_filepath_only=False,img_size=128,show_progress_bar=True):
+    for sample in raw_dataset.generator(get_filepath_only=False,img_size=(256,256),show_progress_bar=True):
         audio_filepath,audio_vals = sample.audio
         _,video_frames = sample.video
         folder_name = os.path.basename(audio_filepath).split('.')[0]
@@ -69,7 +69,7 @@ def create_from_grid_dataset(config,logger):
     dataset = GridDataset(config['grid_dataset_dir'],
                           audio_sampling_rate=audio_sampling_rate,
                           video_frame_rate=video_frame_rate,
-                          samples_count=500)
+                          samples_count=125)
 
     log = create(dataset,config)
     print(f'{dataset.__class__.__name__} successfully processed.')

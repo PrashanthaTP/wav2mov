@@ -1,14 +1,15 @@
 
-from torch.functional import Tensor
+
 import torch
+from torch.functional import Tensor
 import os
 import wave
 from moviepy.editor import AudioFileClip
 import cv2 
 import librosa 
 import imutils  # for image resizing
+import dlib
 from collections import namedtuple
-
 
 
 from wav2mov.core.utils.logger import get_module_level_logger
@@ -18,7 +19,8 @@ Sample = namedtuple('Sample', ['audio', 'video'])
 SampleWithFrames = namedtuple('SampleWithFrames',['audio','audio_frames','video'])
 
 
-def get_video_frames(video_path,img_size):
+face_detector = dlib.get_frontal_face_detector()
+def get_video_frames(video_path,img_size:tuple):
     try:
         cap = cv2.VideoCapture(str(video_path))
         if(not cap.isOpened()):
@@ -29,11 +31,15 @@ def get_video_frames(video_path,img_size):
             ret, image = cap.read()
             if not ret:
                 break
-            image = imutils.resize(image, width=img_size)
+            face = face_detector(image)[0]#get first face object
+            #image[top_row:bottom_row,left_column:right_column]
+            image = cv2.resize(image[face.top():face.bottom(),face.left():face.right()],img_size,interpolation=cv2.INTER_CUBIC)
+            image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)#other librearies including matplotlib expects image in RGB
+            # image = imutils.resize(image, width=img_size)
             frames.append(image)
         return frames 
     except Exception as e:
-        logger.error(f'error in getting video frames | filename : {video_path}')
+        logger.error(f'error in getting video frames | filename : {video_path} : {e}')
         
 def get_audio(audio_path):
     audio,_ = librosa.load(audio_path,sr=None)#sr=None to get native sampling rate

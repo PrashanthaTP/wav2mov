@@ -156,7 +156,7 @@ class GridDataset(RawDataset):
                          link)
 
         
-    def generator(self,get_filepath_only=True,img_size=128,show_progress_bar=True)->Sample:
+    def generator(self,get_filepath_only=True,img_size=(256,256),show_progress_bar=True)->Sample:
         video_folder = os.path.join(self.root_location,'video/')
         audio_folder = os.path.join(self.root_location,'audio/')
         videos = [video for _,_,video in os.walk(video_folder)]
@@ -174,7 +174,7 @@ class GridDataset(RawDataset):
     
             video_val = None if get_filepath_only else get_video_frames(video_path, img_size=img_size)
             audio_val = None if get_filepath_only else get_audio(audio_path)
-            
+    
             res = SampleContainer(video=Sample(video_path, val=video_val),
                                  audio=Sample(audio_path, val=audio_val))
             # if idx+1==limit:#what if the actual length of videos is less than the limit passed by talaharte hudga

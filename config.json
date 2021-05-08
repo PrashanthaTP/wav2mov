@@ -6,7 +6,7 @@
 	"runtime": {
 		"runs_dir": "%(base_dir)s\\runs\\%(v)s\\%(version)s",
 		"log_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\%(log_filename)s.log",
-		"train_test_dataset_dir": "%(base_dir)s\\datasets\\grid_dataset",
+		"train_test_dataset_dir": "%(base_dir)s\\datasets\\grid_dataset_256_256",
         "filenames_txt":"%(base_dir)s\\datasets\\grid_dataset\\filenames.txt",
 
 		"gen_checkpoint_fullpath":"%(base_dir)s\\runs\\%(v)s\\%(version)s\\gen_%(version)s.pt",
