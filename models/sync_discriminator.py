@@ -109,6 +109,7 @@ class SyncDiscriminator(BaseModel):
         img_height = video_frames.shape[-2]
         video_frames = video_frames[...,img_height//2:,:] #consider only lower half of the image so new height is 256/2 = 128
         
+
         video_embeddings = self.pre_disc_v(video_frames)#out has no Temporal(i,e where frames are stacked) dimension | 3d (F,H,W) to 2d(H,W)
         video_embeddings = video_embeddings.reshape(batch_size,
                                                     video_embeddings.shape[1],
@@ -132,3 +133,10 @@ class SyncDiscriminator(BaseModel):
 
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5,0.999))
+
+
+def show_sample_image(video_frames):
+    from wav2mov.utils.plots import show_img
+    img = video_frames.permute(0,2,1,3,4)
+    show_img(img[0,0,...],cmap='gray')
+    return

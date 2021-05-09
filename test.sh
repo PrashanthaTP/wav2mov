@@ -6,4 +6,4 @@ log='n'
 device='cpu'
 version='v9'
 
-python main.py --device=${device} --test=${is_test} --version=${version} --model_path=${model_path} --log=${log}
+python main/main.py --device=${device} --test=${is_test} --version=${version} --model_path=${model_path} --log=${log}

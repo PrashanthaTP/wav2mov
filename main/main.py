@@ -40,6 +40,7 @@ def test(test_logger,args_options,config):
 
 def save_message(options,config):
     if not getattr(options,'msg'):return
+    if options.log=='n':return
     path = os.path.join(os.path.dirname(config['log_fullpath']),f'message_{config.version}.txt')
     print('message written to ',path)
     with open(path,'a+') as file:

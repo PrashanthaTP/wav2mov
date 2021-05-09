@@ -13,10 +13,12 @@ def show_img(img,cmap='viridis'):
     else:
         if len(img.shape)>3:
             img = img.squeeze(0)
-        img_np = img.numpy()
+        img_np = img.cpu().numpy()
         img_np = np.transpose(img_np, (1, 2, 0))
     # print(img_np.shape)
     # print(img_np)
+    if img_np.shape[2]==1:#if single channel
+        img_np = img_np.squeeze(2)
     plt.imshow(img_np,cmap=cmap)
     plt.show()
     # 
