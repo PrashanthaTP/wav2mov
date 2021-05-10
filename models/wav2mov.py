@@ -59,7 +59,8 @@ class Wav2Mov(TemplateModel):
         self.model.save(*args,**kwargs)
         
     def load(self,*args,**kwargs):
-        return self.model.load(*args,**kwargs)
+        ret = self.model.load(*args,**kwargs)
+        return ret
         
     def to_device(self,*args):
         return [arg.to(self.device) for arg in args]
@@ -74,6 +75,9 @@ class Wav2Mov(TemplateModel):
         self.reset_input()
         
     def setup_input(self,batch,state):
+      
+
+
         audio,audio_frames,video = batch
         audio,audio_frames,video = self.to_device(audio,audio_frames,video)
         # video = process_video(video,self.hparams) 
@@ -171,6 +175,7 @@ class Wav2Mov(TemplateModel):
 
         num_frames = self.video.shape[1]
         start_fraction = 0
+        
         for i in range(fraction):
             end_fraction = int((1/fraction)*(i+1)*num_frames) if i!=fraction-1 else num_frames
             batch = {}
@@ -183,6 +188,9 @@ class Wav2Mov(TemplateModel):
             
             # audio_frames = self.squeeze_frames(audio_frames)
             audio_frames = self.audio_frames[:,start_fraction:end_fraction,:]
+            # self.logger.debug('real video {} audio_frames {} ref_frames {}'.format(real_video_frames.shape,
+            #                                                                           audio_frames.shape,
+            #                                                                           batch['ref_video_frames'].shape))
             batch['fake_video_frames'] = self(audio_frames,batch['ref_video_frames']) 
 
             self.add_fake_frames(batch['fake_video_frames'],target_shape=real_video_frames.shape)
@@ -193,35 +201,42 @@ class Wav2Mov(TemplateModel):
     def __optimize(self,adversarial):     
         self.fake_video_frames = None
         self.fake_video_frames_c = None
-        FRACTION =5
+        FRACTION = self.hparams['num_frames_fraction']
         losses = {'gen':(0.0,0),
                   'id':(0.0,0),
                   'l1':(0.0,0),
                   'sync':(0.0,0),
                   'seq':(0.0,0)}       
+          
         for sub_batch in self.__get_sub_batch(fraction=FRACTION):
             self.model.set_input(sub_batch)
-            loss_id_dict = self.model.optimize_id(adversarial=False)
+            loss_id_dict = self.model.optimize_id(adversarial=False,scale=FRACTION)
+            losses = self._merge_losses(losses,loss_id_dict)
             # self.logger.debug(f'wav2mov 456 {loss_id}')
             # for name,(loss,n) in loss_id.items():
             #     prev_loss,prev_n = losses.get(name,(0.0,0))
             #     loss_id[name] = (prev_loss+loss,prev_n+n)
-            losses = self._merge_losses(losses,loss_id_dict)
 
         self.model.step_id_disc()
-        # self.model.step_gen()#because RuntimeError: step() has already been called since the last update().in next step_gen()
-        
+        # self.model.step_gen()
+
         self.model.set_input(self.get_sub_seq(do_re_gen=adversarial,fraction=FRACTION))
         loss_sync_dict = self.model.optimize_sync(adversarial)
-        losses = self._merge_losses(losses,loss_sync_dict)
+        self.model.set_input(self.get_sub_seq(do_re_gen=adversarial,fraction=FRACTION))#if not generated again , the computation graph would not be available
+        loss_seq_dict = self.model.optimize_seq(adversarial)
+
+
+        losses = self._merge_losses(losses,loss_sync_dict,loss_seq_dict)
         
         self.model.step_sync_disc()
+        self.model.step_seq_disc()
         self.model.step_gen()
-        
+
         self.model.update_scale()
 
         # losses = {**losses,**loss_id,**loss_sync}
         return losses
+
     def _merge_losses(self,*loss_dicts):
         merged_losses = {}
         for loss_dict in loss_dicts:
@@ -230,7 +245,7 @@ class Wav2Mov(TemplateModel):
                 prev_loss,prev_n = merged_losses[key]
                 merged_losses[key] = (prev_loss+loss,prev_n+n)
         return merged_losses
-                
+
     def optimize(self,state):
         epoch = state.epoch
         batch_idx = state.epoch

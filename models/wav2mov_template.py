@@ -42,8 +42,8 @@ class Wav2MovTemplate(TemplateModel):
     def init_models(self):
         self.gen = GeneratorBW(self.hparams['gen'])
         self.seq_disc = SequenceDiscriminatorCNN(self.hparams['disc']['sequence_disc_cnn'])
-        self.id_disc = PatchDiscriminator(self.hparams['disc']['patch_disc'])
-        # self.id_disc = IdentityDiscriminator(hparams['disc']['identity_disc'])
+        # self.id_disc = PatchDiscriminator(self.hparams['disc']['patch_disc'])
+        self.id_disc = IdentityDiscriminator(self.hparams['disc']['identity_disc'])
         self.sync_disc = SyncDiscriminator(self.hparams['disc']['sync_disc'])
         init_net(self.gen)
         init_net(self.seq_disc)
@@ -80,6 +80,8 @@ class Wav2MovTemplate(TemplateModel):
                                         gamma=discs_gamma,verbose=True)
         self.scheduler_sync_disc = StepLR(self.optim_sync_disc,step_size=discs_step_size,
                                           gamma=discs_gamma,verbose=True)
+        self.scheduler_seq_disc = StepLR(self.optim_seq_disc,step_size=discs_step_size,
+                                          gamma=discs_gamma,verbose=True)
             
     def forward(self,audio_frames,ref_video_frames):
         # self.logger.debug(f'inside wav2movtemplate forward {audio_frames.shape} {ref_video_frames.shape}')
@@ -105,7 +107,7 @@ class Wav2MovTemplate(TemplateModel):
         # for key,value in batch:
         #     self.logger.debug(f'{key} : {value.shape} ')
         
-    def backward_id(self):
+    def backward_id(self,scale):
         with amp.autocast():
             disc_out = self.id_disc(self.real_video_frames,
                             self.ref_video_frames)
@@ -116,6 +118,7 @@ class Wav2MovTemplate(TemplateModel):
             loss_id += self.criterion_gan(disc_out, 
                                           is_real_target=False)/2
 
+            loss_id /= scale
             loss_ret = loss_id.item()
             loss_id /= self.accumulation_steps
 
@@ -150,7 +153,7 @@ class Wav2MovTemplate(TemplateModel):
         return {'sync':(loss_ret,self.audio_seq.shape[0])}
 
     def backward_seq(self,adversarial=False):
-        scale = 1 if exclude_fake else 2
+        scale = 2 if adversarial else 1
         with amp.autocast():
             disc_out = self.seq_disc(self.real_video_frames)
             loss_seq = self.criterion_gan(disc_out, is_real_target=True)/scale
@@ -162,7 +165,7 @@ class Wav2MovTemplate(TemplateModel):
         self.scaler.scale(loss_seq).backward()
         return {'seq':(ret_loss,self.real_video_frames.shape[0])}
 
-    def backward_gen_id(self,adversarial):
+    def backward_gen_id(self,adversarial,scale):
         with amp.autocast():
          
             ##################################
@@ -172,18 +175,24 @@ class Wav2MovTemplate(TemplateModel):
                                         self.ref_video_frames)
 
             loss_gen = self.criterion_gan(id_disc_out,
-                                           is_real_target=True) * self.hparams['scales']['lambda_id_disc']
+                                           is_real_target=True) * self.hparams['scales']['lambda_id_disc']/scale
 
             ##################################
             # L1 Criterion
             ##################################
             loss_l1 = self.criterion_L1(self.fake_video_frames,
-                                        self.real_video_frames)*self.hparams['scales']['lambda_L1']
+                                        self.real_video_frames)/scale
+            if adversarial:
+                loss_l1 = loss_l1*(self.hparams['scales']['lambda_L1']*0.5)
+            else:
+                loss_l1 = loss_l1*self.hparams['scales']['lambda_L1']
+             
+
+
             loss_ret = {'gen':(loss_gen.item(),self.fake_video_frames.shape[0]),
                         'l1':(loss_l1.item(),self.fake_video_frames.shape[0])}
             loss_gen += loss_l1
-            
-            
+                        
             loss_gen /= self.accumulation_steps
         # if return_orig_loss:
         #   return loss_ret,loss_gen
@@ -224,12 +233,12 @@ class Wav2MovTemplate(TemplateModel):
         self.scaler.step(self.optim_id_disc)
         self.scaler.step(self.optim_sync_disc)
         self.scaler.step(self.optim_gen)
-        # self.scaler.step(self.optim_seq_disc)
+        self.scaler.step(self.optim_seq_disc)
         
         self.optim_gen.zero_grad(set_to_none=True)
         self.optim_id_disc.zero_grad(set_to_none=True)
         self.optim_sync_disc.zero_grad(set_to_none=True)
-        # self.optim_seq_disc.zero_grad(set_to_none=True)
+        self.optim_seq_disc.zero_grad(set_to_none=True)
       
         self.scaler.update()
 
@@ -253,10 +262,10 @@ class Wav2MovTemplate(TemplateModel):
       self.scaler.update()
     
 
-    def optimize_id(self,adversarial):
+    def optimize_id(self,adversarial,scale):
         losses = {}
-        losses_id = self.backward_id()
-        losses_gen = self.backward_gen_id(adversarial)
+        losses_id = self.backward_id(scale)
+        losses_gen = self.backward_gen_id(adversarial,scale)
         losses = {**losses_id,**losses_gen}
         self.clear_input()
         return losses
@@ -322,10 +331,10 @@ class Wav2MovTemplate(TemplateModel):
             # #################################
             # # SEQ discriminator
             # #################################
-            # seq_disc_out = self.seq_disc(self.fake_video_frames)
+            seq_disc_out = self.seq_disc(self.fake_video_frames)
             
-            # loss_gen += self.criterion_gan(seq_disc_out,
-            #                               is_real_target=True)*self.hparams['scales']['lambda_seq_disc']
+            loss_gen += self.criterion_gan(seq_disc_out,
+                                          is_real_target=True)*self.hparams['scales']['lambda_seq_disc']
 
           loss_ret['gen'] = (loss_gen.item(),self.fake_video_frames.shape[0])
           loss_gen /= self.accumulation_steps
@@ -348,15 +357,20 @@ class Wav2MovTemplate(TemplateModel):
 
     def save_optimizers_and_schedulers(self):
         models = ['gen','id_disc','sync_disc','seq_disc']
+        saved = []
         for model in models:
             optim_name = f'optim_{model}'
             scheduler_name = f'scheduler_{model}'
             if hasattr(self,optim_name):
                 optim_checkpoint = self.config[f'optim_{model}_checkpoint_fullpath']
                 self.save_state_dict(optim_name,checkpoint=optim_checkpoint)
+                saved.append(optim_name)
             if hasattr(self,scheduler_name):
                 scheduler_checkpoint = self.config[f'scheduler_{model}_checkpoint_fullpath']
                 self.save_state_dict(scheduler_name,checkpoint=scheduler_checkpoint)
+                saved.append(scheduler_name)
+        
+        self.logger.debug(f'[SAVE] saved : {saved}')
 
     def load_optimizers_and_schedulers(self,checkpoint_dir):
         version = os.path.basename(checkpoint_dir)
