@@ -134,7 +134,7 @@ class Wav2Mov(TemplateModel):
           
           start_fraction = end_fraction
 
-    def get_sub_seq(self,do_re_gen=False,fraction=None):
+    def get_sub_seq(self,fraction=None):
         """ return smaller set of frames from audio,real_video_frames,fake_video_frames"""
      
         ret = {}
@@ -220,10 +220,10 @@ class Wav2Mov(TemplateModel):
         self.model.step_id_disc()
         # self.model.step_gen()
 
-        self.model.set_input(self.get_sub_seq(do_re_gen=adversarial,fraction=FRACTION))
+        self.model.set_input(self.get_sub_seq(fraction=FRACTION))
         loss_sync_dict = self.model.optimize_sync(adversarial)
-        self.model.set_input(self.get_sub_seq(do_re_gen=adversarial,fraction=FRACTION))#if not generated again , the computation graph would not be available
-        loss_seq_dict = self.model.optimize_seq(adversarial)
+        self.model.set_input(self.get_sub_seq(fraction=FRACTION))#if not generated again , the computation graph would not be available
+        loss_seq_dict = self.model.optimize_seq(adversarial=True)
 
 
         losses = self._merge_losses(losses,loss_sync_dict,loss_seq_dict)

@@ -89,11 +89,11 @@ class Wav2MovTemplate(TemplateModel):
           return self.gen(audio_frames,ref_video_frames)
 
     def clear_input(self):
-      self.audio_seq = None
-      self.ref_video_frames = None
-      self.real_video_frames = None
-      self.fake_video_frames = None
-      self.audio_seq_out_of_sync = None
+        self.audio_seq = None
+        self.ref_video_frames = None
+        self.real_video_frames = None
+        self.fake_video_frames = None
+        self.audio_seq_out_of_sync = None
 
     def set_input(self,batch:dict):
         # self.audio_frames = batch.get('audio_frames')
@@ -286,8 +286,8 @@ class Wav2MovTemplate(TemplateModel):
         self.clear_input()
         return losses
     
-    def optimize_discs(self,adversarial_with_seq_sync=False):
-        loss_id = self.backward_id()
+    def optimize_discs(self,adversarial_with_seq_sync=False,scale=1):
+        loss_id = self.backward_id(scale)
         loss_sync = self.backward_sync(adversarial=adversarial_with_seq_sync)
         #loss_seq = self.backward_seq()
         return {**loss_id,**loss_sync}
