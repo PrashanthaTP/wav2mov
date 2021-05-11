@@ -49,7 +49,7 @@ This repo contains the pytorch implementation of achieving facial animation from
 }
 ```
 
-<a id="#4" href="https://arxiv.org/abs/2003.00418">[4] A Lip Sync Expert Is All You Need for Speech to Lip Generation In the Wild</a>
+<a id="#4" href="https://arxiv.org/abs/2008.10010">[4] A Lip Sync Expert Is All You Need for Speech to Lip Generation In the Wild</a>
 
 
 [![Github stars](https://img.shields.io/badge/Github-wav2Lip-<COLOR>.svg)](https://github.com/Rudrabha/Wav2Lip)
