@@ -9,13 +9,11 @@ This repo contains the pytorch implementation of achieving facial animation from
 
 <a id="1" href="https://arxiv.org/abs/1406.2661">[1] Generative Adversarial Nets</a>
 ```
-@misc{goodfellow2014generative,
-      title={Generative Adversarial Networks}, 
-      author={Ian J. Goodfellow and Jean Pouget-Abadie and Mehdi Mirza and Bing Xu and David Warde-Farley and Sherjil Ozair and Aaron Courville and Yoshua Bengio},
-      year={2014},
-      eprint={1406.2661},
-      archivePrefix={arXiv},
-      primaryClass={stat.ML}
+@article{goodfellow2014generative,
+  title={Generative adversarial networks},
+  author={Goodfellow, Ian J and Pouget-Abadie, Jean and Mirza, Mehdi and Xu, Bing and Warde-Farley, David and Ozair, Sherjil and Courville, Aaron and Bengio, Yoshua},
+  journal={arXiv preprint arXiv:1406.2661},
+  year={2014}
 }
 ```
 
