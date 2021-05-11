@@ -198,7 +198,7 @@ class Wav2Mov(TemplateModel):
             start_fraction = end_fraction
             yield batch
             
-    def __optimize(self,adversarial):     
+    def __optimize(self,epoch,adversarial):     
         self.fake_video_frames = None
         self.fake_video_frames_c = None
         FRACTION = self.hparams['num_frames_fraction']
@@ -237,6 +237,10 @@ class Wav2Mov(TemplateModel):
         # losses = {**losses,**loss_id,**loss_sync}
         return losses
 
+    def on_epoch_end(self,state):
+        # self.model.update_learning_rate(state.epoch)
+        pass
+
     def _merge_losses(self,*loss_dicts):
         merged_losses = {}
         for loss_dict in loss_dicts:
@@ -249,10 +253,11 @@ class Wav2Mov(TemplateModel):
     def optimize(self,state):
         epoch = state.epoch
         batch_idx = state.epoch
-        losses = self.__optimize(adversarial=epoch>=self.hparams['pre_learning_epochs'])
+        losses = self.__optimize(epoch,adversarial=epoch>=self.hparams['pre_learning_epochs'])
         
         # if (batch_idx+1)%self.accumulation_steps:
         #     self.model.step()
         return losses
+
     def on_run_end(self,state):
       self.logger.debug(str(self))

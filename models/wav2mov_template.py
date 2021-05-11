@@ -1,5 +1,6 @@
 
 import os
+import random
 
 import torch
 from torch.cuda import amp
@@ -89,11 +90,11 @@ class Wav2MovTemplate(TemplateModel):
           return self.gen(audio_frames,ref_video_frames)
 
     def clear_input(self):
-        self.audio_seq = None
-        self.ref_video_frames = None
-        self.real_video_frames = None
-        self.fake_video_frames = None
-        self.audio_seq_out_of_sync = None
+      self.audio_seq = None
+      self.ref_video_frames = None
+      self.real_video_frames = None
+      self.fake_video_frames = None
+      self.audio_seq_out_of_sync = None
 
     def set_input(self,batch:dict):
         # self.audio_frames = batch.get('audio_frames')
@@ -183,7 +184,7 @@ class Wav2MovTemplate(TemplateModel):
             loss_l1 = self.criterion_L1(self.fake_video_frames,
                                         self.real_video_frames)/scale
             if adversarial:
-                loss_l1 = loss_l1*(self.hparams['scales']['lambda_L1']*0.5)
+                loss_l1 = loss_l1*self.hparams['scales']['lambda_L1']*0.5
             else:
                 loss_l1 = loss_l1*self.hparams['scales']['lambda_L1']
              
@@ -258,9 +259,19 @@ class Wav2MovTemplate(TemplateModel):
       self.scaler.step(self.optim_gen)
       self.optim_gen.zero_grad(set_to_none=True)
 
+    def scheduler_step(self):
+      self.scheduler_gen.step()
+      self.scheduler_id_disc.step()
+      self.scheduler_sync_disc.step()
+      self.scheduler_seq_disc.step()
+      
     def update_scale(self):
       self.scaler.update()
     
+    def update_learning_rate(self,epoch):
+      if epoch<self.hparams['scheduler']['max_epoch']:
+        self.scheduler_step()
+
 
     def optimize_id(self,adversarial,scale):
         losses = {}
