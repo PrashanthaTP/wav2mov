@@ -89,52 +89,59 @@ class Wav2Mov(TemplateModel):
         batch_size,num_frames,*extra = item.shape
         return item.reshape(batch_size*num_frames,*extra)
         
+    def __get_random_indices(self,low,high,num_frames):
+        return random.sample(range(low,high),k=num_frames)
+        # return torch.randint(low,high,(num_frames,))  #size must be tuple
+
     def get_ref_frames(self,video):
         # REF_FRAME_IDX = self.hparams['ref_frame_idx']
-        # batch_size,num_frames,channels,height,width = video.shape
-        num_frames = video.shape[1]
-        REF_FRAME_IDX = int(num_frames*0.6)
-        ref_frames = video[:,REF_FRAME_IDX,:,:,:]#shape is B,F,C,H,W-->B,C,H,W
-        ref_frames = ref_frames.unsqueeze(1)#B,1,C,H,W
-        # self.logger.debug(f'inside get_ref_frames 1: {ref_frames.shape} {num_frames}')
-        ref_frames = ref_frames.repeat(1,num_frames,1,1,1)
-        # self.logger.debug(f'inside get_ref_frames 2: {ref_frames.shape}')
-        # ref_frames = ref_frames.reshape(batch_size*num_frames,channels,height,width)
+
+        batch_size,num_frames,*_ = video.shape
+      
+        ############################ METHOD 1 #############################
+        # for each video , for each frame , a random frame from the same video will be the reference frame
+        #############################################################
+        ref_frame_indices = self.__get_random_indices(0,num_frames,num_frames)    
+        ref_frames = video[:,ref_frame_indices]
+        ############################ METHOD 2 ##################################
+        # ref_frames = video[torch.arange(video.shape[0]),ref_frame_indices]
+        # ref_frames = ref_frames.unsqueeze(1)#B,1,C,H,W   
+        # ref_frames = ref_frames.repeat(1,num_frames,1,1,1)
+        #########################################################################
         return ref_frames
     
     def add_fake_frames(self,frames,target_shape):
-        batch_size,num_frames,*extra = target_shape
         # frames = frames.reshape(batch_size,num_frames,*extra)#from B*F,C,H,W to B,F,C,H,W
         fake_frames = [self.fake_video_frames,frames] if self.fake_video_frames is not None else [frames]
         # self.logger.debug(f'line no 396 | frames {frames.shape} target shape {batch_size,num_frames}{extra} ')
         self.fake_video_frames = torch.cat(fake_frames,dim=1)
     
     def swap_channel_frame_axes(self,video):
-      return video.permute(0,2,1,3,4)#B,F,C,H,W to B,C,F,H,W
+        return video.permute(0,2,1,3,4)#B,F,C,H,W to B,C,F,H,W
 
     def re_gen(self,fraction):
-      # self.logger.debug(f'line 503 fake_video_frames : {self.fake_video_frames.shape}')
-      self.fake_video_frames = None
-      # self.logger.debug(f'line 475 fake_video_frames cleared ')
-      num_frames = self.video.shape[1]
-      start_fraction = 0
-      for i in range(fraction):
-          end_fraction = int((1/fraction)*(i+1)*num_frames) if i!=fraction-1 else num_frames
-          batch = {}
-          # self.logger.debug(f'inside sub batching with fraction {fraction} of {num_frames} frames| {start_fraction} : {end_fraction}')
-          batch['real_video_frames'] = self.video[:,start_fraction:end_fraction,:,:,:]
-          # batch['real_video_frames']  = self.squeeze_frames(real_video_frames)
-          batch['ref_video_frames'] = self.get_ref_frames(batch['real_video_frames'])
-          # batch['ref_video_frames'] = self.squeeze_frames(ref_video_frames)
+        # self.logger.debug(f'line 503 fake_video_frames : {self.fake_video_frames.shape}')
+        self.fake_video_frames = None
+        # self.logger.debug(f'line 475 fake_video_frames cleared ')
+        num_frames = self.video.shape[1]
+        start_fraction = 0
+        for i in range(fraction):
+            end_fraction = int((1/fraction)*(i+1)*num_frames) if i!=fraction-1 else num_frames
+            batch = {}
+            # self.logger.debug(f'inside sub batching with fraction {fraction} of {num_frames} frames| {start_fraction} : {end_fraction}')
+            batch['real_video_frames'] = self.video[:,start_fraction:end_fraction,:,:,:]
+            # batch['real_video_frames']  = self.squeeze_frames(real_video_frames)
+            batch['ref_video_frames'] = self.get_ref_frames(batch['real_video_frames'])
+            # batch['ref_video_frames'] = self.squeeze_frames(ref_video_frames)
 
-          audio_frames = self.audio_frames[:,start_fraction:end_fraction,:]
-          # audio_frames = self.squeeze_frames(audio_frames)
-          batch['fake_video_frames'] = self(audio_frames,batch['ref_video_frames']) 
-          self.add_fake_frames(batch['fake_video_frames'],target_shape=batch['real_video_frames'].shape)
-          
-          start_fraction = end_fraction
+            audio_frames = self.audio_frames[:,start_fraction:end_fraction,:]
+            # audio_frames = self.squeeze_frames(audio_frames)
+            batch['fake_video_frames'] = self(audio_frames,batch['ref_video_frames']) 
+            self.add_fake_frames(batch['fake_video_frames'],target_shape=batch['real_video_frames'].shape)
+            
+            start_fraction = end_fraction
 
-    def get_sub_seq(self,fraction=None):
+    def get_sub_seq(self):
         """ return smaller set of frames from audio,real_video_frames,fake_video_frames"""
      
         ret = {}
@@ -198,7 +205,7 @@ class Wav2Mov(TemplateModel):
             start_fraction = end_fraction
             yield batch
             
-    def __optimize(self,epoch,adversarial):     
+    def __optimize(self,adversarial):     
         self.fake_video_frames = None
         self.fake_video_frames_c = None
         FRACTION = self.hparams['num_frames_fraction']
@@ -220,9 +227,9 @@ class Wav2Mov(TemplateModel):
         self.model.step_id_disc()
         # self.model.step_gen()
 
-        self.model.set_input(self.get_sub_seq(fraction=FRACTION))
+        self.model.set_input(self.get_sub_seq())
         loss_sync_dict = self.model.optimize_sync(adversarial)
-        self.model.set_input(self.get_sub_seq(fraction=FRACTION))#if not generated again , the computation graph would not be available
+        self.model.set_input(self.get_sub_seq())#if not generated again , the computation graph would not be available
         loss_seq_dict = self.model.optimize_seq(adversarial=True)
 
 
@@ -253,7 +260,7 @@ class Wav2Mov(TemplateModel):
     def optimize(self,state):
         epoch = state.epoch
         batch_idx = state.epoch
-        losses = self.__optimize(epoch,adversarial=epoch>=self.hparams['pre_learning_epochs'])
+        losses = self.__optimize(adversarial=epoch>=self.hparams['pre_learning_epochs'])
         
         # if (batch_idx+1)%self.accumulation_steps:
         #     self.model.step()
