@@ -197,8 +197,7 @@ class Wav2MovTemplate(TemplateModel):
             loss_gen /= self.accumulation_steps
         # if return_orig_loss:
         #   return loss_ret,loss_gen
-
-        self.scaler.scale(loss_gen).backward(retain_graph=adversarial)
+        self.scaler.scale(loss_gen).backward()
         return loss_ret
 
     def backward_gen_sync(self):

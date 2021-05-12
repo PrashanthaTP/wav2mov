@@ -70,14 +70,15 @@ class Wav2Mov(TemplateModel):
         self.audio_frames = None
         self.video = None
         self.fake_video_frames = None
-    
+        
+    def on_epoch_start(self,state):
+        if state.epoch+1 == self.hparams['pre_learning_epochs']:
+          self.logger.debug(f'============================== Adversarial traininig with id disc and sync disc starts now ================================')
+
     def on_batch_start(self,state):
         self.reset_input()
         
     def setup_input(self,batch,state):
-      
-
-
         audio,audio_frames,video = batch
         audio,audio_frames,video = self.to_device(audio,audio_frames,video)
         # video = process_video(video,self.hparams) 
@@ -145,14 +146,13 @@ class Wav2Mov(TemplateModel):
         """ return smaller set of frames from audio,real_video_frames,fake_video_frames"""
      
         ret = {}
-      
-
+    
         # self.video = self.swap_channel_frame_axes(self.video)
    
         OFFSET_SYNC_OUT_OF_SYNC = 15
         NUM_FRAMES_FOR_SYNC = 5
-        NUM_FRAMES_ACTUAL = self.video.shape[1] #num_frames is present in 3rd dimension now.(B,C,F,H,W)
-        NUM_FRAMES_REQ_MIN =  OFFSET_SYNC_OUT_OF_SYNC + 2*NUM_FRAMES_FOR_SYNC
+        NUM_FRAMES_ACTUAL = self.video.shape[1] #num_frames is present in 2nd dimension now.(B,F,C,H,W)
+        NUM_FRAMES_REQ_MIN =  OFFSET_SYNC_OUT_OF_SYNC + 2*NUM_FRAMES_FOR_SYNC 
         if NUM_FRAMES_ACTUAL < NUM_FRAMES_REQ_MIN: 
              raise ValueError(f'Given video should atleast have {NUM_FRAMES_REQ_MIN} frames. Instead given video has {NUM_FRAMES_ACTUAL} frames')
 
@@ -224,8 +224,8 @@ class Wav2Mov(TemplateModel):
             #     prev_loss,prev_n = losses.get(name,(0.0,0))
             #     loss_id[name] = (prev_loss+loss,prev_n+n)
 
-        self.model.step_id_disc()
         # self.model.step_gen()
+        self.model.step_id_disc()
 
         self.model.set_input(self.get_sub_seq())
         loss_sync_dict = self.model.optimize_sync(adversarial)
@@ -247,7 +247,7 @@ class Wav2Mov(TemplateModel):
     def on_epoch_end(self,state):
         # self.model.update_learning_rate(state.epoch)
         pass
-
+    
     def _merge_losses(self,*loss_dicts):
         merged_losses = {}
         for loss_dict in loss_dicts:
@@ -260,7 +260,7 @@ class Wav2Mov(TemplateModel):
     def optimize(self,state):
         epoch = state.epoch
         batch_idx = state.epoch
-        losses = self.__optimize(adversarial=epoch>=self.hparams['pre_learning_epochs'])
+        losses = self.__optimize(adversarial=((epoch+1)>=self.hparams['pre_learning_epochs']))
         
         # if (batch_idx+1)%self.accumulation_steps:
         #     self.model.step()
