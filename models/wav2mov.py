@@ -207,7 +207,7 @@ class Wav2Mov(TemplateModel):
             
     def __optimize(self,adversarial):     
         self.fake_video_frames = None
-        self.fake_video_frames_c = None
+     
         FRACTION = self.hparams['num_frames_fraction']
         losses = {'gen':(0.0,0),
                   'id':(0.0,0),
@@ -217,7 +217,7 @@ class Wav2Mov(TemplateModel):
           
         for sub_batch in self.__get_sub_batch(fraction=FRACTION):
             self.model.set_input(sub_batch)
-            loss_id_dict = self.model.optimize_id(adversarial=False,scale=FRACTION)
+            loss_id_dict = self.model.optimize_id(adversarial=adversarial,scale=FRACTION)
             losses = self._merge_losses(losses,loss_id_dict)
             # self.logger.debug(f'wav2mov 456 {loss_id}')
             # for name,(loss,n) in loss_id.items():
