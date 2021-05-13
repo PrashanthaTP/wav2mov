@@ -57,7 +57,7 @@ class Wav2Mov(TemplateModel):
         self.fake_video_frames = None
         
     def on_epoch_start(self,state):
-        if state.epoch+1 == self.hparams['pre_learning_epochs']:
+        if state.epoch == self.hparams['pre_learning_epochs']:
           self.logger.debug(f'============================== Adversarial traininig with id disc and sync disc starts now ================================')
 
     def on_batch_start(self,state):
@@ -245,7 +245,7 @@ class Wav2Mov(TemplateModel):
     def optimize(self,state):
         epoch = state.epoch
         batch_idx = state.epoch
-        losses = self.__optimize(adversarial=((epoch+1)>=self.hparams['pre_learning_epochs']))
+        losses = self.__optimize(adversarial=((epoch)>=self.hparams['pre_learning_epochs']))
         
         # if (batch_idx+1)%self.accumulation_steps:
         #     self.model.step()
