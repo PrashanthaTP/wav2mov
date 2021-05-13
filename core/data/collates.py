@@ -36,7 +36,6 @@ def get_batch_collate(hparams):
     stride =  hparams['audio_sf']// hparams['video_fps']
     audio_util = AudioUtil(hparams['coarticulation_factor'],stride)
     def collate_fn(batch):
-        # print('inside collate ',type(batch[0].video))
         videos = [(sample.video,sample.video.shape[0]) for sample in batch]
         videos,video_lens = list(zip(*videos))
         

@@ -1,4 +1,4 @@
-from wav2mov.models.wav2mov import Wav2Mov 
+from wav2mov.models.wav2mov_trainer import Wav2Mov 
 from wav2mov.main.engine import Engine
 from wav2mov.main.callbacks import LossMetersCallback,ModelCheckpoint,TimeTrackerCallback,LoggingCallback
 

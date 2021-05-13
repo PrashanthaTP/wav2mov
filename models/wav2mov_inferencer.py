@@ -1,9 +1,8 @@
 import torch
-from torch.autograd.grad_mode import no_grad
 from wav2mov.core.models.template import TemplateModel
 from wav2mov.core.data.utils import AudioUtil
 
-from wav2mov.models.generator import Generator
+from wav2mov.models import Generator
 
 from wav2mov.logger import get_module_level_logger
 logger = get_module_level_logger(__name__)

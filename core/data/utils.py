@@ -122,30 +122,30 @@ class AudioUtil:
         return torch.cat(frames,dim=0)
                     
     def get_limited_audio(self,audio,num_frames,start_frame=None) :
-            possible_num_frames = audio.shape[-1]//self.stride
-            if num_frames>possible_num_frames:
-                logger.error(f'Given num_frames {num_frames} is larger the possible_num_frames {possible_num_frames}')
+        possible_num_frames = audio.shape[-1]//self.stride
+        if num_frames>possible_num_frames:
+            logger.error(f'Given num_frames {num_frames} is larger the possible_num_frames {possible_num_frames}')
 
-            padding = torch.zeros((audio.shape[0],self.coarticulation_factor*self.stride),device=self.device) 
-            audio = torch.cat([padding,audio,padding],dim=1)
-             
-            # possible_num_frames = audio.shape[-1]//self.stride
-            actual_start_frame = (possible_num_frames-num_frames)//2
-            # [......................................................]
-            #         [................................]
-            #         |<-----num_frames---------------->|
-            #.........^
-            #   actual start frame
-            if start_frame is None:
-                start_frame = actual_start_frame
-                
-            if start_frame+num_frames>possible_num_frames:#[why > not >=]think if possible num_frames is 50 and 50 is the requied num_frames and start_frame is zero
-                logger.warning(f'Given Audio has {possible_num_frames} frames. Given starting frame {start_frame} cannot be consider for getting {num_frames} frames. Changing startframes to {actual_start_frame} frame.')
-                start_frame = actual_start_frame
-                
-            end_frame = start_frame + (num_frames) #exclusive
+        padding = torch.zeros((audio.shape[0],self.coarticulation_factor*self.stride),device=self.device) 
+        audio = torch.cat([padding,audio,padding],dim=1)
             
-            start_pos = self.__get_center_idx(start_frame)
-            end_pos = self.__get_center_idx(end_frame-1)
-            audio = audio[:,self.__get_start_idx(start_pos):self.__get_end_idx(end_pos)]
-            return audio
+        # possible_num_frames = audio.shape[-1]//self.stride
+        actual_start_frame = (possible_num_frames-num_frames)//2
+        # [......................................................]
+        #         [................................]
+        #         |<-----num_frames---------------->|
+        #.........^
+        #   actual start frame
+        if start_frame is None:
+            start_frame = actual_start_frame
+            
+        if start_frame+num_frames>possible_num_frames:#[why > not >=]think if possible num_frames is 50 and 50 is the requied num_frames and start_frame is zero
+            logger.warning(f'Given Audio has {possible_num_frames} frames. Given starting frame {start_frame} cannot be consider for getting {num_frames} frames. Changing startframes to {actual_start_frame} frame.')
+            start_frame = actual_start_frame
+            
+        end_frame = start_frame + (num_frames) #exclusive
+        
+        start_pos = self.__get_center_idx(start_frame)
+        end_pos = self.__get_center_idx(end_frame-1)
+        audio = audio[:,self.__get_start_idx(start_pos):self.__get_end_idx(end_pos)]
+        return audio

@@ -2,28 +2,13 @@
 Supports BATCHING  
 audio windowing with coarticulation factor and lr scheduling(new version)
 """
-import os
 import random
-
 import torch
 
-# from torchvision import transforms as vtransforms
-
 from wav2mov.core.models.template import TemplateModel
-
 from wav2mov.core.data.utils import AudioUtil
 
 from wav2mov.models.wav2mov_template import Wav2MovTemplate
-# def process_video(video,hparams):
-#     img_channels = hparams['img_channels']
-#     img_size = hparams['img_size']
-    
-#     transforms = get_transforms((img_size, img_size), img_channels)
-#     bsize, frames, channels, height, width = video.shape
-#     video = video.reshape(bsize*frames, channels, height, width)#vtransforms.Reshape requires input to be of 3d shape
-#     video = transforms(video)
-#     video = video.reshape(bsize, frames, channels,height,width)
-#     return video
 
 
 class Wav2Mov(TemplateModel):

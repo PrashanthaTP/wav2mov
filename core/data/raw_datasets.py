@@ -2,7 +2,6 @@
 import os
 from abc import abstractmethod
 from collections import namedtuple
-from os import path
 from tqdm import tqdm
 
 from wav2mov.core.data.utils import get_video_frames,get_audio,get_audio_from_video
@@ -53,8 +52,6 @@ class RawDataset:
     def info(self):
         return print(f'self.__class__.__name__ : {self.website}')
     
-    # def create_numpy_files(self):
-    #     raise NotImplementedError("function create_numpy_file is not implemented.")
     @abstractmethod
     def generator(self):
         raise NotImplementedError(f'{self.__class__.__name__} should implement generator method')
@@ -160,9 +157,10 @@ class GridDataset(RawDataset):
         video_folder = os.path.join(self.root_location,'video/')
         audio_folder = os.path.join(self.root_location,'audio/')
         videos = [video for _,_,video in os.walk(video_folder)]
-        if self.samples_count is None : self.samples_count = len(videos[0])
+        if self.samples_count is None : 
+            self.samples_count = len(videos[0])
         self.samples_count = min(len(videos[0]),self.samples_count)
-        limit = self.samples_count if self.samples_count!=None else len(videos[0])
+        limit = self.samples_count 
         progress_bar = tqdm(enumerate(videos[0][:limit]),
                             desc="Grid Dataset",
                             total=len(videos[0][:limit]), ascii=True, colour="green") if show_progress_bar else enumerate(videos[0][:limit])

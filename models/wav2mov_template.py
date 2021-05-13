@@ -1,23 +1,17 @@
 
 import os
-import random
-
 import torch
 from torch.cuda import amp
 from torch.optim.lr_scheduler import StepLR
-# from torchvision import transforms as vtransforms
-
 from wav2mov.core.models.template import TemplateModel
+from wav2mov.models import  (GeneratorBW,
+                            SequenceDiscriminator, SequenceDiscriminatorCNN,
+                            IdentityDiscriminator,
+                            PatchDiscriminator,
+                            SyncDiscriminator)
 
-from wav2mov.models.generator import Generator, GeneratorBW
-from wav2mov.models.sequence_discriminator import SequenceDiscriminator, SequenceDiscriminatorCNN
-from wav2mov.models.identity_discriminator import IdentityDiscriminator
-from wav2mov.models.patch_disc import PatchDiscriminator
-from wav2mov.models.sync_discriminator import SyncDiscriminator
 from wav2mov.models.utils import init_net
 from wav2mov.losses import GANLoss,SyncLoss,L1_Loss
-
-
 
 class Wav2MovTemplate(TemplateModel):
     def __init__(self,hparams,config,logger):

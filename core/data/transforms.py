@@ -1,6 +1,7 @@
 from torchvision import transforms as vtransforms
 
 from wav2mov.core.data.utils import Sample
+
 class ResizeGrayscale:
     def __init__(self,target_shape):
         _,*img_size = target_shape
@@ -12,9 +13,7 @@ class ResizeGrayscale:
                 ])
     def __call__(self,sample):
         video = sample.video
-        # print(f'inside transform ',type(video))
         video = self.transform(video)
-        # print('after transform',type(video))
         return Sample(sample.audio,video) 
     
 class Normalize:

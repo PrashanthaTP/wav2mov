@@ -8,7 +8,6 @@ from collections import namedtuple
 from wav2mov.core.data.utils import Sample
 
 
-# TODO : using MFCCS
 class AudioVideoDataset(Dataset):
     """
     Dataset for audio and video numpy files 
@@ -29,9 +28,6 @@ class AudioVideoDataset(Dataset):
         with open(filenames_text_filepath,'r') as file: 
             self.filenames = file.read().split('\n')
         self.filenames = self.filenames[:num_videos]
-        
-  
-        
         
     def __len__(self):
         return len(self.filenames)
@@ -65,17 +61,6 @@ class AudioVideoDataset(Dataset):
         if self.transform:
             sample = self.transform(sample)
         return sample
-    
-    def __pad_audio(self,audio):
-        padding = torch.tensor([0]*self.stride)
-        return torch.cat([padding,audio,padding],dim=0)
-        
-    def __frame_wise_split(self,audio,frame_num):
-        #Zero based indexing for zeroth frame the actual frame is at 0....stride-1[actual_frame]....
-        #                                                                   -stride<----------->+2*stride
-        # total length of the result is 3*stride
-        curr_idx = frame_num*self.stride-1 
-        return audio[curr_idx-self.stride:curr_idx+2*self.stride]
         
   
         
