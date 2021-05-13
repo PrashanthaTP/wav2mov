@@ -5,10 +5,8 @@ from wav2mov.core.data.utils import AudioUtil
 
 from wav2mov.models.generator import Generator
 
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+from wav2mov.logger import get_module_level_logger
+logger = get_module_level_logger(__name__)
 
 def no_grad_wrapper(fn):
     def wrapper(*args,**kwargs):

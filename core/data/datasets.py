@@ -30,6 +30,9 @@ class AudioVideoDataset(Dataset):
             self.filenames = file.read().split('\n')
         self.filenames = self.filenames[:num_videos]
         
+  
+        
+        
     def __len__(self):
         return len(self.filenames)
     
@@ -76,7 +79,4 @@ class AudioVideoDataset(Dataset):
         
   
         
-
-
-
     

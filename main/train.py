@@ -12,7 +12,6 @@ def train_model(options,hparams,config,logger):
     model = Wav2Mov(hparams,config,logger)
     collate_fn = get_batch_collate(hparams['data'])
     dataloaders_ntuple = get_dataloaders(options,config,hparams,
-                                         get_mean_std=False,
                                          collate_fn=collate_fn)
     callbacks = [LossMetersCallback(options,hparams,logger,
                                     verbose=True),
