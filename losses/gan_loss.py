@@ -1,3 +1,4 @@
+import random
 import torch 
 from torch import nn 
 
@@ -7,8 +8,10 @@ class GANLoss(nn.Module):
     
     """
     
-    def __init__(self,device,real_label=1.0,fake_label=0.0):
+    def __init__(self,device,real_label=None,fake_label=0.0):
         super().__init__()
+        if real_label is None:
+            real_label = round(random.uniform(0.8,1),2)
         self.register_buffer('real_label',torch.tensor(real_label))
         self.register_buffer('fake_label',torch.tensor(fake_label))
         self.loss = nn.BCEWithLogitsLoss()
@@ -21,4 +24,3 @@ class GANLoss(nn.Module):
     def forward(self,preds,is_real_target):
         target_tensor = self.get_target_tensor(preds,is_real_target)
         return self.loss(preds,target_tensor)    
-        

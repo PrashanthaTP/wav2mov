@@ -3,7 +3,7 @@ from wav2mov.main.engine import Engine
 from wav2mov.main.callbacks import LossMetersCallback,ModelCheckpoint,TimeTrackerCallback,LoggingCallback
 
 from wav2mov.core.data.collates import get_batch_collate
-from wav2mov.main.data import get_dataloaders
+from wav2mov.main.data import get_dataloaders_v2 as get_dataloaders
 
 
 
