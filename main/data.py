@@ -123,21 +123,7 @@ def get_dataloaders_v2(options,config,params,shuffle=True,collate_fn=None):
     return DataloadersPack(train_dl,test_dl)
 
 
-
-
-def get_mean_and_std_v2(root_dir,filenames_txt,img_channels):
-    logger.debug('Calculating mean and standard deviation for the dataset.Please wait...')
-    ret = {}
-    #mean = E(X)
-    #variance = E(X**2)- E(X)**2
-    #standard deviation = variance**0.5
-    filenames_path = os.path.join(root_dir,filenames_txt)
-    with open(filenames_path) as file:
-        filenames = file.read().split('\n')
-    for i,name in enumerate(filenames[:]):
-        if not name.strip():
-            del filenames[i]
-            
+def get_video_mean_and_std(root_dir,filenames,img_channels):
     channels_sum,channels_squared_sum,num_batches = 0,0,0
     # num_items = 0
     for _,filename in tqdm(enumerate(filenames),ascii=True,total=len(filenames),desc='video'):
@@ -158,10 +144,9 @@ def get_mean_and_std_v2(root_dir,filenames_txt,img_channels):
     mean = channels_sum/num_batches     
    
     std = ((channels_squared_sum/num_batches) - mean**2)**0.5
-   
-    ret['video']  = (mean,std)
+    return mean,std
     
-    
+def get_audio_mean_and_std(root_dir,filenames):
     running_mean_sum , running_squarred_mean_sum =  0,0
     for _,filename in tqdm(enumerate(filenames),ascii=True,total=len(filenames),desc='audio'):
         audio_path = os.path.join(root_dir,filename,'audio.npy')
@@ -170,6 +155,22 @@ def get_mean_and_std_v2(root_dir,filenames_txt,img_channels):
         running_squarred_mean_sum += torch.mean(audio**2)
     mean = running_mean_sum/len(filenames)
     std = ((running_squarred_mean_sum/len(filenames))-mean**2)**0.5
-    ret['audio'] = (mean,std)
+    return mean,std
+
+def get_mean_and_std_v2(root_dir,filenames_txt,img_channels):
+    logger.debug('Calculating mean and standard deviation for the dataset.Please wait...')
+    ret = {}
+    #mean = E(X)
+    #variance = E(X**2)- E(X)**2
+    #standard deviation = variance**0.5
+    filenames_path = os.path.join(root_dir,filenames_txt)
+    with open(filenames_path) as file:
+        filenames = file.read().split('\n')
+    for i,name in enumerate(filenames[:]):
+        if not name.strip():
+            del filenames[i]
+            
+    ret['video']  = ([0.5]*img_channels,[0.5]*img_channels)
+    ret['audio'] = get_audio_mean_and_std(root_dir,filenames)
     logger.debug(f'[MEAN and STANDARD_DEVIATION] {ret}')
     return ret

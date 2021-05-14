@@ -4,7 +4,7 @@ import torch
 from torchvision import utils as vutils
 from wav2mov.core.data.collates import get_batch_collate
 from wav2mov.models.wav2mov_inferencer import Wav2movInferencer
-from wav2mov.main.data import get_dataloaders
+from wav2mov.main.data import get_dataloaders_v2 as get_dataloaders
 
 class Evaluator:
     def __init__(self,config):
@@ -33,7 +33,7 @@ def test_model(options,hparams,config,logger):
     model.load(state_dict)
     logger.log(f'model was trained for {last_epoch+1} epochs. ')  
     collate_fn = get_batch_collate(hparams['data']) 
-    test_dl = get_dataloaders(options,config,hparams,get_mean_std=False,collate_fn=collate_fn)
+    test_dl = get_dataloaders(options,config,hparams,collate_fn=collate_fn)
     sample = next(iter(test_dl))
 
     audio,audio_frames,video = sample
