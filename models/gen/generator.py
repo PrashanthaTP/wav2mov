@@ -27,16 +27,20 @@ class DoubleConvBlock(nn.Module):
 
     """
 
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch,use_norm=True):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_ch, out_ch, 3)
+        self.use_norm = use_norm
+        self.conv1 = nn.Conv2d(in_ch, out_ch, 3,bias=not self.use_norm)
+        self.batch_norm = nn.BatchNorm2d(out_ch)
         self.relu = nn.ReLU()
         self.conv2 = nn.Conv2d(out_ch, out_ch, 3)
 
     def forward(self, x):
         # print('double conv block',x.shape,type(x),x.device,next(self.parameters()).device)
-        return self.relu(self.conv2(self.relu(self.conv1(x))))
-
+        x = self.conv1(x)
+        if self.use_norm :
+          x = self.batch_norm(x) 
+        return self.relu(self.conv2(self.relu(x)))
 
 class Encoder(nn.Module):
     """

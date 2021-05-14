@@ -1,13 +1,16 @@
 import torch
 from torch import nn,optim
-
 from wav2mov.models.utils import squeeze_batch_frames
+
+from wav2mov.logger import get_module_level_logger
+logger = get_module_level_logger(__name__)
+
 
 class PatchDiscriminator(nn.Module):
     """ 
     ref : https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/models/networks.py
     """
-    def __init__(self,hparams,norm_layer=nn.InstanceNorm2d,use_bias = True):
+    def __init__(self,hparams,norm_layer=nn.BatchNorm2d,use_bias = True):
         super().__init__()
         self.hparams = hparams
         input_nc = hparams['in_channels']
@@ -44,8 +47,8 @@ class PatchDiscriminator(nn.Module):
             ]
         
         self.disc = nn.Sequential(*sequence)
-    
- 
+
+
     def forward(self,frame_image,ref_image):
         assert frame_image.shape == ref_image.shape
         batch_size = frame_image.shape[0]
@@ -58,7 +61,6 @@ class PatchDiscriminator(nn.Module):
         frame_image = torch.cat([frame_image,ref_image],dim=1)#catenate images along the channel dimension
         #frame image now has a shape of (N,C+C,H,W)
         return self.disc(frame_image)
-    
     
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5, 0.999))

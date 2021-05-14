@@ -86,5 +86,3 @@ class SequenceDiscriminatorCNN(BaseModel):
 
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5,0.999))
-
-
