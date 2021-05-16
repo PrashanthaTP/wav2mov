@@ -6,6 +6,7 @@ It is the entry point to various functions
 
 """
 import os
+import random
 import torch 
 from torch.utils.tensorboard.writer import SummaryWriter 
 
@@ -21,6 +22,7 @@ from wav2mov.main.test import test_model
 from wav2mov.main.options import Options,set_options
 from wav2mov.main.validate_params import check_batchsize
 torch.manual_seed(params['seed'])
+random.seed(params['seed'])
 
 def get_logger(config,filehandler_required=False):
     local_logger = Logger(__name__)
