@@ -170,7 +170,7 @@ class Wav2MovTemplate(TemplateModel):
                                         self.ref_video_frames)
 
             loss_gen = self.criterion_gan(id_disc_out,
-                                           is_real_target=True) * self.hparams['scales']['lambda_id_disc']
+                                           is_real_target=True) * self.hparams['scales']['lambda_id_disc']/scale
 
             ##################################
             # L1 Criterion
@@ -187,7 +187,7 @@ class Wav2MovTemplate(TemplateModel):
             loss_ret = {'gen':(loss_gen.item(),self.fake_video_frames.shape[0]),
                         'l1':(loss_l1.item(),self.fake_video_frames.shape[0])}
             loss_gen += loss_l1
-            loss_gen /= scale             
+                     
             loss_gen /= self.accumulation_steps
         # if return_orig_loss:
         #   return loss_ret,loss_gen
