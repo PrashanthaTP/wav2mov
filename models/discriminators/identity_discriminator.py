@@ -54,23 +54,15 @@ class IdentityDiscriminator(BaseModel):
         y : still image
         """
         assert x.shape==y.shape
-        is_frame_dim_present = False
 
         if len(x.shape)>4:#frame dim present
-            is_frame_dim_present = True
-            batch_size,num_frames,*img_shape = x.shape
             x = squeeze_batch_frames(x)
             y = squeeze_batch_frames(y)
         
             
         x = torch.cat([x,y],dim=1)#along channels
-        # return self.desc(x)
-        # for block in self.blocks:
-        #     x = block(x)
-        # return x.reshape(x.shape[0],-1)
         x = self.disc(x)
         return x
-        # return x if  not is_frame_dim_present else x.reshape(batch_size,num_frames,*img_shape)
     
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5,0.999))
@@ -155,7 +147,7 @@ class IdentityDiscriminator_V2(nn.Module):
         self.pool = nn.MaxPool2d(2)
 
     def forward(self, frame_img,ref_image):
-      
+        x = torch.cat([frame_img,ref_image],dim=1)
         filters = []
         for block in self.enc_blocks:
             x = block(x)
