@@ -1,3 +1,4 @@
+import random
 import torch
 from torch import nn
 
@@ -7,8 +8,10 @@ class SyncLoss(nn.Module):
     [Reference]:
     https://github.com/Rudrabha/Wav2Lip/blob/master/hq_wav2lip_train.py#L181-L186 
     """
-    def __init__(self,device,real_label=0.0,fake_label=1.0):
+    def __init__(self,device,real_label=None,fake_label=1.0):
         super().__init__()
+        if real_label is None:
+            real_label = round(random.uniform(0.8,1),2)
         self.register_buffer('real_label',torch.tensor(real_label))
         self.register_buffer('fake_label',torch.tensor(fake_label))
         self.loss = nn.BCEWithLogitsLoss()
