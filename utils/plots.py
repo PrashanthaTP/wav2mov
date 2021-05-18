@@ -7,6 +7,13 @@ from matplotlib import pyplot as plt
 import warnings
 warnings.filterwarnings( "ignore", module = "matplotlib\..*" )
 
+def no_grad_wrapper(fn):
+    def wrapper(*args,**kwargs):
+        with torch.no_grad():
+            return fn(*args,**kwargs)
+    return wrapper
+
+@no_grad_wrapper
 def show_img(img,cmap='viridis'):
     if isinstance(img,np.ndarray):
         img_np = img

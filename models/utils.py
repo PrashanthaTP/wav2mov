@@ -1,13 +1,25 @@
-""" src : https://github1s.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/models/networks.py """
-
+from math import ceil
 from torch.nn import init
 
 from wav2mov.logger import get_module_level_logger
 logger = get_module_level_logger(__name__)
 
+def get_same_padding(kernel_size,stride,in_size=0):
+    """https://stanford.edu/~shervine/teaching/cs-230/cheatsheet-convolutional-neural-networks
+    
+    padding = 'same'
+        • Padding such that feature map size has size In_size/Stride
+        
+        • Output size is mathematically convenient
+        
+        • Also called 'half' padding
+    """
+    out_size = ceil(in_size/stride)
+    return ceil(((out_size-1)*stride+ kernel_size-1)/2)#(k-1)//2 for same padding
+
 def init_weights(net, init_type='normal', init_gain=0.02):
     """Initialize network weights.
-
+    src : https://github1s.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/models/networks.py 
     Parameters:
         net (network)   -- network to be initialized
         init_type (str) -- the name of an initialization method: normal | xavier | kaiming | orthogonal
