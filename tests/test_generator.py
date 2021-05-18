@@ -45,7 +45,7 @@ class TestGen(unittest.TestCase):
 
     def test_generator(self):
         logger.debug(f'test generator')
-    
+        
         hparams = {
                 'in_channels':3,
                 'chs':[64,128,256,512,1024],
@@ -53,7 +53,8 @@ class TestGen(unittest.TestCase):
                 'latent_dim_id':(8,8),
                 'latent_dim_audio':256,
                 'latent_dim_noise':10,
-                'device':'cpu'
+                'device':'cpu',
+                'lr':2e-4
             }
                
         gen = Generator(hparams)
@@ -72,7 +73,7 @@ def test_on_real_img(gen):
         ref_frames = torch.from_numpy(np.load(r'E:\Users\VS_Code_Workspace\Python\VirtualEnvironments\wav2mov\wav2mov\datasets\grid_dataset_256_256\s10_l_bbat9p\video_frames.npy'))
         show_img(ref_frames[0].permute(2,0,1))
         ref_frames = ref_frames[0].permute(2,0,1).unsqueeze(0).unsqueeze(0).float()
-        logger.debug(ref_frames.shape)
+        # logger.debug(ref_frames.shape)
         audio_frames = torch.randn(1,1,5*666)
         out = gen(audio_frames,ref_frames)
         show_img(out[0][0])

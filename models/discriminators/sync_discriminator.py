@@ -137,8 +137,10 @@ class SyncDiscriminator(BaseModel):
         #see syncnet forward pass https://github.com/Rudrabha/Wav2Lip/blob/master/models/syncnet.py#L62-L63
         audio_embeddings = nn.functional.normalize(audio_embeddings,p=2,dim=1) 
         video_embeddings = nn.functional.normalize(video_embeddings,p=2,dim=1) 
-        # print(self.disc_a(audio_frames).shape,audio_frames.shape)
-        return audio_embeddings,video_embeddings 
+        
+        cosine_dist = nn.functional.cosine_similarity(audio_embeddings,video_embeddings)
+        classification = self.snp(torch.cat([audio_embeddings,video_embeddings],dim=1)) #concat to get (B,size_audio_embedding+size_video_embedding)
+        return (classification,)
 
     def get_optimizer(self):
         return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5,0.999))

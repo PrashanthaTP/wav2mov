@@ -21,7 +21,7 @@ class SyncLoss(nn.Module):
         target_tensor = self.real_label if is_real_target else self.fake_label
         return target_tensor.expand_as(preds).to(self.device)
     
-    def forward(self,audio_embedding,video_embedding,is_real_target):
-        preds = nn.functional.cosine_similarity(audio_embedding,video_embedding)
+    def forward(self,preds,is_real_target):
+        # preds = nn.functional.cosine_similarity(audio_embedding,video_embedding)
         target_tensor = self.get_target_tensor(preds,is_real_target)
         return self.loss(preds,target_tensor)

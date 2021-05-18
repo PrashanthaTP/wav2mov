@@ -47,7 +47,7 @@
 			"lr": 1e-4
 		}
 	},
-	"gen": {
+	"gen_archieved": {
 		"device": "cuda",
 		"in_channels": 1,
 		"enc_chs": [64, 128, 256, 512, 1024],
@@ -57,6 +57,17 @@
 		"retain_dim": true,
 		"lr": 1e-4
 	},
+
+	"gen": {
+			"in_channels":3,
+			"chs":[64,128,256,512,1024],
+			"latent_dim":282,
+			"latent_dim_id":[8,8],
+			"latent_dim_audio":256,
+			"latent_dim_noise":10,
+			"device":"cpu",
+			"lr":2e-4
+		},
 
 	"scales": {
 		"lambda_seq_disc": 0.2,

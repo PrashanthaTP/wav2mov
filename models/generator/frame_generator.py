@@ -1,5 +1,5 @@
 import torch
-from torch import nn
+from torch import nn,optim
 
 from wav2mov.models.generator.audio_encoder import AudioEnocoder
 from wav2mov.models.generator.noise_encoder import NoiseEncoder 
@@ -31,3 +31,6 @@ class Generator(nn.Module):
         gen_frames =  self.id_decoder(encoded,intermediates)
         _,*img_shape = gen_frames.shape
         return gen_frames.reshape(batch_size,num_frames,*img_shape)
+
+    def get_optimizer(self):
+        return optim.Adam(self.parameters(), lr=self.hparams['lr'], betas=(0.5, 0.999))
