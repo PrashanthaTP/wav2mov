@@ -216,12 +216,12 @@ class AudioEnocoder(nn.Module):
         #audio = 666*5=3330
         self.conv = nn.Sequential(
             nn.Conv1d(1, 64, 330, 30,bias=use_bias),#input 666 output (3330-330+0)/30 + 1 = 101
-            nn.InstanceNorm1d(64),
+            nn.BatchNorm1d(64),
             nn.ReLU(),
             nn.Conv1d(64, 128, 3, 1,bias=use_bias),#((101-3+0)/1)+1 =98
-            nn.InstanceNorm1d(128),
+            nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.Conv1d(128, 1,4,2,1),#((98-4+2)/2)+1 = 48 +1 = 49
+            nn.BatchNorm1d(128, 1,4,2,1),#((98-4+2)/2)+1 = 48 +1 = 49
             nn.ReLU(),
         
         
