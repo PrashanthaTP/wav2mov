@@ -1,10 +1,9 @@
 import random
 import torch
-from torch.autograd.grad_mode import no_grad
 from wav2mov.core.models.template import TemplateModel
 from wav2mov.core.data.utils import AudioUtil
 
-from wav2mov.models.generator import GeneratorBW
+from wav2mov.models import Generator
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -23,7 +22,7 @@ class Wav2movInferencer(TemplateModel):
         self.hparams = hparams
         self.logger = logger
         self.device = 'cpu'
-        self.gen = GeneratorBW(hparams['gen'])
+        self.gen = Generator(hparams['gen'])
         self.stride = self.hparams['data']['audio_sf']//self.hparams['data']['video_fps']
         self.audio_util = AudioUtil(self.hparams['data']['coarticulation_factor'],self.stride,self.device)  
 
