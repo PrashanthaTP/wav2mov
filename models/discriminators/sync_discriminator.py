@@ -106,7 +106,8 @@ class SyncDiscriminator(BaseModel):
             nn.ReLU(),
             nn.Linear(256, 128)
             )
-
+        self.slp = nn.Sequential(nn.Linear(1,1))
+        
     def forward(self, audio_frames, video_frames):
         """audio_frames is of shape : [batch_size,1,N] and video_frames is of shape : [batch_size,channels,height,width]
 
@@ -139,7 +140,9 @@ class SyncDiscriminator(BaseModel):
         video_embeddings = nn.functional.normalize(video_embeddings,p=2,dim=1) 
         
         cosine_dist = nn.functional.cosine_similarity(audio_embeddings,video_embeddings)
-        classification = self.snp(torch.cat([audio_embeddings,video_embeddings],dim=1)) #concat to get (B,size_audio_embedding+size_video_embedding)
+        cosine_dist = cosine_dist.reshape(batch_size,-1)
+        classification = self.slp(cosine_dist)
+        # classification = self.snp(torch.cat([audio_embeddings,video_embeddings],dim=1)) #concat to get (B,size_audio_embedding+size_video_embedding)
         return (classification,)
 
     def get_optimizer(self):

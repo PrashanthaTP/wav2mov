@@ -16,8 +16,11 @@ class Evaluator:
         pass      
 
 def squeeze_frames(video):
-    batch_size,num_frames,_ = video.shape 
-    return video.reshape(batch_size*num_frames,_) 
+    batch_size,num_frames,*extra = video.shape 
+    return video.reshape(batch_size*num_frames,*extra) 
+
+def denormalize_frames(frames):
+  return ((frames*0.5)+0.5)*255
 
 def make_path_compatible(path):
     if os.sep != '\\':#not windows
@@ -26,28 +29,40 @@ def make_path_compatible(path):
 def test_model(options,hparams,config,logger):
     logger.debug(f'Testing model...')
     version = os.path.basename(options.model_path).strip('gen_').split('.')[0]
-    out_dir = config['out_dir']
-    model = Wav2movInferencer(hparams)
-    checkpoint = torch.load(options.model_path)
+    logger.debug(f'loading version : {version}')
+    out_dir = os.path.join(config['out_dir'],version)
+    model = Wav2movInferencer(hparams,logger)
+    checkpoint = torch.load(options.model_path,map_location='cpu')
     state_dict,last_epoch = checkpoint['state_dict'],checkpoint['epoch']
     model.load(state_dict)
-    logger.log(f'model was trained for {last_epoch+1} epochs. ')  
+    logger.debug(f'model was trained for {last_epoch+1} epochs. ')  
     collate_fn = get_batch_collate(hparams['data']) 
-    test_dl = get_dataloaders(options,config,hparams,collate_fn=collate_fn)
+    logger.debug('Loading dataloaders')
+    dataloaders = get_dataloaders(options,config,hparams,collate_fn=collate_fn)
+    test_dl = dataloaders.val
     sample = next(iter(test_dl))
-
+    # print(sample,len(sample))
     audio,audio_frames,video = sample
-    fake_video_frames = model.test(audio_frames,video)
+    fake_video_frames,ref_video_frame = model.test(audio_frames,video,get_ref_video_frame=True)
     fake_video_frames = squeeze_frames(fake_video_frames) 
     video = squeeze_frames(video)
     os.makedirs(out_dir,exist_ok=True)
     save_path_fake_video_frames = os.path.join(out_dir,f'fake_frames_{version}.png')
     save_path_real_video_frames = os.path.join(out_dir,f'real_frames_{version}.png')
+    save_path_ref_video_frame = os.path.join(out_dir,f'ref_frame_{version}.png')
     save_path_fake_video_frames = make_path_compatible(save_path_fake_video_frames)
     save_path_real_video_frames = make_path_compatible(save_path_real_video_frames)
+    save_path_ref_video_frame = make_path_compatible(save_path_ref_video_frame)
     
-    vutils.save_image(fake_video_frames,save_path_fake_video_frames)
-    vutils.save_image(video,save_path_real_video_frames)
+    vutils.save_image(denormalize_frames(ref_video_frame),save_path_ref_video_frame,normalize=True)
+    vutils.save_image(denormalize_frames(fake_video_frames),save_path_fake_video_frames,normalize=True)
+    vutils.save_image(denormalize_frames(video),save_path_real_video_frames,normalize=True)
     logger.debug(f'results are saved in {out_dir}')
     
-    
+    msg = f'test_run for version {version}.\n'
+    msg += '='*25
+    msg += f'\nlast epoch : {last_epoch}\n'
+    msg += f'curr_version : {config.version}\n'
+    with open(os.path.join(out_dir,'info.txt'),'a+') as file:
+      file.write(msg)
+      

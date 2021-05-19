@@ -13,11 +13,11 @@ logger = get_module_level_logger(__name__)
 class Generator(nn.Module):
     def __init__(self,hparams):
         super().__init__()
-        
-        self.id_encoder = IdEncoder(hparams)
-        self.id_decoder = IdDecoder(hparams)
-        self.audio_encoder = AudioEnocoder(hparams)
-        self.noise_encoder = NoiseEncoder(hparams)
+        self.hparams = hparams 
+        self.id_encoder = IdEncoder(self.hparams)
+        self.id_decoder = IdDecoder(self.hparams)
+        self.audio_encoder = AudioEnocoder(self.hparams)
+        self.noise_encoder = NoiseEncoder(self.hparams)
 
     def forward(self,audio_frames,ref_frames):
         batch_size,num_frames,*_ = ref_frames.shape
