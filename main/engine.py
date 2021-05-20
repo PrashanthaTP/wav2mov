@@ -47,7 +47,7 @@ class Engine(TemplateEngine):
         if prev_epoch is None:
             prev_epoch = 0
         self.logger.debug(f'weights loaded successfully: {self.config.version} <== {loading_version}')
-        return prev_epoch
+        return prev_epoch + 1
     
     def dispatch(self, event):
         super().dispatch(event,state=self.state)
@@ -56,7 +56,7 @@ class Engine(TemplateEngine):
         callbacks = callbacks or []
         callbacks = [model] + callbacks
         self.register(callbacks)
-        self.state.start_epoch = self.load_checkpoint(model)
+        self.state.start_epoch = self.load_checkpoint(model) 
         
         train_dl = dataloaders_ntuple.train
         self.state.num_batches = len(train_dl)
