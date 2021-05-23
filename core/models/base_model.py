@@ -24,3 +24,9 @@ class BaseModel(nn.Module):
     def forward(self,*args):
         raise NotImplementedError(f'Forward method is not defined in {self.__class__.__name__}')
     
+    def freeze_learning(self):
+        for p in self.parameters():
+          p.require_grad = False
+
+
+

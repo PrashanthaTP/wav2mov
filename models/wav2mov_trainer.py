@@ -18,6 +18,7 @@ class Wav2Mov(TemplateModel):
         self.hparams = hparams
         self.config = config
         self.logger = logger
+        self.train_sync_expert = True
         self.set_device()
         
     def set_device(self):
@@ -87,13 +88,18 @@ class Wav2Mov(TemplateModel):
         ############################ METHOD 1 #############################
         # for each video , for each frame , a random frame from the same video will be the reference frame
         #############################################################
-        ref_frame_indices = self.__get_random_indices(0,num_frames,num_frames)    
-        ref_frames = video[:,ref_frame_indices]
+        # ref_frame_indices = self.__get_random_indices(0,num_frames,num_frames)    
+        # ref_frames = video[:,ref_frame_indices]
         ############################ METHOD 2 ##################################
         # ref_frames = video[torch.arange(video.shape[0]),ref_frame_indices]
         # ref_frames = ref_frames.unsqueeze(1)#B,1,C,H,W   
         # ref_frames = ref_frames.repeat(1,num_frames,1,1,1)
         #########################################################################
+        REF_FRAME_IDX = int(random.randint(0,1)*(num_frames-1))  
+        ref_frames = video[:,REF_FRAME_IDX,:,:,:]
+        ref_frames = ref_frames.unsqueeze(1)#B,1,C,H,W   
+        ref_frames = ref_frames.repeat(1,num_frames,1,1,1)
+        
         return ref_frames
     
     def add_fake_frames(self,frames,target_shape):
@@ -211,17 +217,24 @@ class Wav2Mov(TemplateModel):
 
         # self.model.step_gen()
         self.model.step_id_disc()
+        ##############################################
+        # if adversarial and  self.train_sync_expert:#at the end of prelearning
+        #     self.train_sync_expert = False
+        #     self.model.freeze_sync_disc()
+        ##############################################
 
         self.model.set_input(self.get_sub_seq())
         loss_sync_dict = self.model.optimize_sync(adversarial)
-        self.model.set_input(self.get_sub_seq())#if not generated again , the computation graph would not be available
-        loss_seq_dict = self.model.optimize_seq(adversarial=True)
+        # self.model.set_input(self.get_sub_seq())#if not generated again , the computation graph would not be available
+        # loss_seq_dict = self.model.optimize_seq(adversarial=True)
 
 
-        losses = self._merge_losses(losses,loss_sync_dict,loss_seq_dict)
+        # losses = self._merge_losses(losses,loss_sync_dict,loss_seq_dict)
+        losses = self._merge_losses(losses,loss_sync_dict)
         
+        # if not adversarial:
         self.model.step_sync_disc()
-        self.model.step_seq_disc()
+        # self.model.step_seq_disc()
         self.model.step_gen()
 
         self.model.update_scale()
