@@ -1,11 +1,19 @@
-from typing import List
+import os
 import torch
 from torch.functional import Tensor
+
 import imageio
 import numpy as np
 from matplotlib import pyplot as plt
+
+from moviepy import editor as mpy
+from scipy.io.wavfile import write as write_audio
+
 import warnings
 warnings.filterwarnings( "ignore", module = "matplotlib\..*" )
+
+from wav2mov.logger import get_module_level_logger
+logger = get_module_level_logger(__name__)
 
 def no_grad_wrapper(fn):
     def wrapper(*args,**kwargs):
@@ -44,3 +52,50 @@ def save_gif(gif_path,images,duration=0.5):
     images = images.transpose(0,2,3,1).astype('uint8')
    
     imageio.mimsave(gif_path,images,duration=0.5)
+    
+
+def save_video(hparams,filepath,audio,video_frames):
+    def get_video_frames(idx):
+        idx = int(idx)
+        # logger.debug(f'{video_frames.shape} ,{video_frames[idx].shape}')
+        frame = video_frames[idx].permute(1,2,0).squeeze()
+        return frame.cpu().numpy().astype(np.uint8)
+
+    logger.debug('saving video please wait...')
+    num_frames = video_frames.shape[0]
+    video_fps = hparams['data']['video_fps']
+    audio_sf = hparams['data']['audio_sf']
+    duration = audio.squeeze().shape[0]/audio_sf
+    # duration = 10
+    # duration = math.ceil(num_frames/video_fps)
+    logger.debug(f'duation {duration} seconds')
+    dir_name = os.path.dirname(filepath)
+    temp_audio_path = os.path.join(dir_name,'temp','temp_audio.wav')
+    os.makedirs(os.path.dirname(temp_audio_path),exist_ok=True)
+    # print(audio.cpu().numpy().reshape(-1).shape)
+    write_audio(temp_audio_path,audio_sf,audio.cpu().numpy().reshape(-1))
+    
+    video_clip = mpy.VideoClip(make_frame=get_video_frames,duration=duration)
+    audio_clip = mpy.AudioFileClip(temp_audio_path,fps=audio_sf)
+    video_clip = video_clip.set_audio(audio_clip)
+    # print(filepath,video_clip.write_videofile.__doc__)
+    video_clip.write_videofile( filepath,
+                                fps=video_fps,
+                                codec="png",
+                                bitrate=None,
+                                audio=True,
+                                audio_fps=audio_sf,
+                                preset="medium",
+                                # audio_nbytes=4,
+                                audio_codec=None,
+                                audio_bitrate=None,
+                                # audio_bufsize=2000,
+                                temp_audiofile=None,
+                                # temp_audiofile_path="",
+                                remove_temp=True,
+                                write_logfile=False,
+                                threads=None,
+                                ffmpeg_params=['-s','256x256','-aspect','1:1'],
+                                logger="bar",
+                                # pixel_format='gray
+                                )
