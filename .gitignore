@@ -6,6 +6,7 @@ runs/
 logs/
 *.png
 !plan_v1.png
+!components.png
 *.gif
 *Run_*
 *.pt

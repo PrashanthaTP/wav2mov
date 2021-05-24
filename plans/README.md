@@ -1,3 +1,4 @@
 # Plans
 
-![Plan V1](plan_v1.png)
+![Plan V1](images/plan_v1.png)
+![File Structure](images/components.png)
