@@ -13,8 +13,8 @@
 		"coarticulation_factor": 2,
 		"audio_sf": 16000,
 		"video_fps": 24,
-		"batch_size": 2,
-		"mini_batch_size": 1,
+		"batch_size": 6,
+		"mini_batch_size": 6,
 		"mean": 0.516,
 		"std": 0.236
 	},
@@ -59,7 +59,7 @@
 	},
 
 	"gen": {
-			"in_channels":3,
+			"in_channels":1,
 			"chs":[64,128,256,512,1024],
 			"latent_dim":282,
 			"latent_dim_id":[8,8],

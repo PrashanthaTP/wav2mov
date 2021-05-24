@@ -42,16 +42,16 @@ class LossMetersCallback(Callbacks):
         self.accumulation_steps = self.hparams['data']['batch_size']//self.hparams['data']['mini_batch_size']
         
     def on_train_start(self,state):
-        self.batch_loss_meter = AverageMetersList(('id_disc',
-                                                   'sync_disc',
-                                                   'seq_disc', 
+        self.batch_loss_meter = AverageMetersList(('id',
+                                                   'sync',
+                                                   'seq', 
                                                    'gen',
                                                    'l1'),
                                                     fmt=':0.4f') 
              
-        self.epoch_loss_meter = AverageMetersList(('id_disc',
-                                                   'sync_disc',
-                                                   'seq_disc', 
+        self.epoch_loss_meter = AverageMetersList(('id',
+                                                   'sync',
+                                                   'seq', 
                                                    'gen',
                                                    'l1'),
                                                     fmt=':0.4f') 
