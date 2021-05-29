@@ -12,3 +12,8 @@ April 27 Tuesday
 April 28
 + Fixing errors in audio framing and wav2mov model
 + Fixing error in time calcualation
+
+
+May 25
++ training sync discriminator and generator seperately initially for about 100 epochs (with 60 videos in train set)
+before continuing with adversarial training helps to get variation in lip (which can be observed only after around 200 epochs)
