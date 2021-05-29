@@ -20,6 +20,29 @@ SampleWithFrames = namedtuple('SampleWithFrames',['audio','audio_frames','video'
 
 
 face_detector = dlib.get_frontal_face_detector()
+
+def convert_and_trim_bb(image, rect):
+    """ from pyimagesearch
+    https://www.pyimagesearch.com/2021/04/19/face-detection-with-dlib-hog-and-cnn/
+    """
+    # extract the starting and ending (x, y)-coordinates of the
+    # bounding box
+    start_x = rect.left()
+    start_y = rect.top()
+    endX = rect.right()
+    endY = rect.bottom()
+    # ensure the bounding box coordinates fall within the spatial
+    # dimensions of the image
+    start_x = max(0, start_x)
+    start_y = max(0, start_y)
+    endX = min(endX, image.shape[1])
+    endY = min(endY, image.shape[0])
+    # compute the width and height of the bounding box
+    w = endX - start_x
+    h = endY - start_y
+    # return our bounding box coordinates
+    return (start_x, start_y, w, h)
+
 def get_video_frames(video_path,img_size:tuple):
     try:
         cap = cv2.VideoCapture(str(video_path))
@@ -31,12 +54,20 @@ def get_video_frames(video_path,img_size:tuple):
             ret, image = cap.read()
             if not ret:
                 break
-            face = face_detector(image)[0]#get first face object
-            #image[top_row:bottom_row,left_column:right_column]
-            image = cv2.resize(image[face.top():face.bottom(),face.left():face.right()],img_size,interpolation=cv2.INTER_CUBIC)
-            image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)#other librearies including matplotlib expects image in RGB
-            # image = imutils.resize(image, width=img_size)
-            frames.append(image)
+            try:
+                #image[top_row:bottom_row,left_column:right_column]
+                image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)#other libraries including matplotlib,dlib expects image in RGB
+                face = face_detector(image)[0]#get first face object
+                x,y,w,h = convert_and_trim_bb(image,face)
+                image = cv2.resize(image[y:y+h,x:x+w],img_size,interpolation=cv2.INTER_CUBIC)
+            except Exception as e:#arises mostly because face_detector could not find the face and resize cannot be done
+                h,w,c = image.shape
+                if h>0 and w>0:
+                  image = cv2.resize(image,img_size,interpolation=cv2.INTER_CUBIC)
+                else:
+                  raise(e)
+            finally:
+                frames.append(image)
         return frames 
     except Exception as e:
         logger.error(f'error in getting video frames | filename : {video_path} : {e}')
