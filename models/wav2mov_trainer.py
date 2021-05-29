@@ -51,18 +51,19 @@ class Wav2Mov(TemplateModel):
     def to_device(self,*args):
         return [arg.to(self.device) for arg in args]
     
-    def reset_input(self):
+    def clear_input(self):
         self.audio = None
         self.audio_frames = None
         self.video = None
         self.fake_video_frames = None
+        self.model.clear_input()
         
     def on_epoch_start(self,state):
         if state.epoch == self.hparams['pre_learning_epochs']:
           self.logger.debug(f'============================== Adversarial traininig with id disc and sync disc starts now ================================')
 
     def on_batch_start(self,state):
-        self.reset_input()
+        self.clear_input()
         
     def setup_input(self,batch,state):
         audio,audio_frames,video = batch
@@ -225,15 +226,16 @@ class Wav2Mov(TemplateModel):
 
         self.model.set_input(self.get_sub_seq())
         loss_sync_dict = self.model.optimize_sync(adversarial)
+        self.model.step_sync_disc()
+        
         # self.model.set_input(self.get_sub_seq())#if not generated again , the computation graph would not be available
         # loss_seq_dict = self.model.optimize_seq(adversarial=True)
 
 
         # losses = self._merge_losses(losses,loss_sync_dict,loss_seq_dict)
         losses = self._merge_losses(losses,loss_sync_dict)
-        
+        self.clear_input() 
         # if not adversarial:
-        self.model.step_sync_disc()
         # self.model.step_seq_disc()
         self.model.step_gen()
 
