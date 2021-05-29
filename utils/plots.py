@@ -1,6 +1,7 @@
 import os
 import torch
 from torch.functional import Tensor
+from torchvision.io import write_video
 
 import imageio
 import numpy as np
@@ -53,8 +54,34 @@ def save_gif(gif_path,images,duration=0.5):
    
     imageio.mimsave(gif_path,images,duration=0.5)
     
+def save_video(hparams,video_path,audio,video_frames):
+    """
+      audio_frames : C,S
+      video_frames : T,C,H,W
+    """
+    if video_frames.shape[1]==1:
+      video_frames = video_frames.repeat(1,3,1,1)
+    logger.debug(f'video frames :{video_frames.shape}, audio : {audio.shape}')
+    video_frames = video_frames.to(torch.uint8)
+    write_video(filename= video_path,
+            video_array = video_frames.permute(0,2,3,1),
+            fps = hparams['video_fps'],
+            video_codec="h264",
+            # audio_array= audio,
+            # audio_fps = hparams['audio_sf'],
+            # audio_codec = 'mp3'
+          )
+    dir_name = os.path.dirname(video_path)
+    temp_audio_path = os.path.join(dir_name,'temp','temp_audio.wav')
+    os.makedirs(os.path.dirname(temp_audio_path),exist_ok=True)
+    write_audio(temp_audio_path,hparams['audio_sf'],audio.cpu().numpy().reshape(-1))
 
-def save_video(hparams,filepath,audio,video_frames):
+    video_clip = mpy.VideoFileClip(video_path)
+    audio_clip = mpy.AudioFileClip(temp_audio_path)
+    video_clip.audio = audio_clip
+    video_clip.write_videofile(os.path.join(dir_name,'fake_audio_video.avi'),fps=hparams['video_fps'],codec='png')
+    
+def save_video_v2(hparams,filepath,audio,video_frames):
     def get_video_frames(idx):
         idx = int(idx)
         # logger.debug(f'{video_frames.shape} ,{video_frames[idx].shape}')
