@@ -131,14 +131,14 @@ class Wav2MovTemplate(TemplateModel):
             disc_out = self.sync_disc(self.audio_seq,
                                       self.real_video_frames)
             
-            self.logger.debug(f'[sync] for synced seq {disc_out[0][0].item():0.4f}')
+            self.logger.debug(f'[sync] disc out real | in sync | {disc_out[0][0].item():0.4f}')
             loss_sync = self.criterion_sync(*disc_out,
                                            is_real_target=True)/scale
             
             disc_out = self.sync_disc(self.audio_seq_out_of_sync,
                                       self.real_video_frames)
 
-            self.logger.debug(f'[sync] for out of sync seq {disc_out[0][0].item():0.4f}')
+            self.logger.debug(f'[sync] disc out real | out of sync|  {disc_out[0][0].item():0.4f}')
     
             loss_sync += self.criterion_sync(*disc_out,
                                             is_real_target=False)/scale
@@ -147,7 +147,7 @@ class Wav2MovTemplate(TemplateModel):
                 # self.logger.debug(f'line 143 {self.audio_seq.shape} {self.fake_video_frames.shape}')
                 disc_out = self.sync_disc(self.audio_seq,
                                           self.fake_video_frames.detach())
-                self.logger.debug(f'[sync] for gen seq {disc_out[0][0].item():0.4f}')
+                self.logger.debug(f'[sync] disc out fake :{disc_out[0][0].item():0.4f}')
 
                 loss_sync += self.criterion_sync(*disc_out,
                                                 is_real_target=False)/scale
@@ -162,10 +162,12 @@ class Wav2MovTemplate(TemplateModel):
         with amp.autocast():
             disc_out = self.seq_disc(self.real_video_frames)
             loss_seq = self.criterion_gan(disc_out, is_real_target=True)/scale
+            
             if adversarial:
                 disc_out = self.seq_disc(self.fake_video_frames.detach())
                 loss_seq += self.criterion_gan(disc_out, is_real_target=False)/scale
             ret_loss = loss_seq.item()
+            
             loss_seq /= self.accumulation_steps
         self.scaler.scale(loss_seq).backward()
         return {'seq':(ret_loss,self.real_video_frames.shape[0])}
@@ -220,7 +222,7 @@ class Wav2MovTemplate(TemplateModel):
             loss_gen /= self.accumulation_steps
         # if return_orig_loss:
         #   return loss_ret,loss_gen
-        self.logger.debug(f'gen_sync : {loss_gen.item():.04f}  sync_disc_out : {sync_disc_out[0][0].item():0.4f}')
+        self.logger.debug(f'[sync] gen_loss : {loss_gen.item():.04f}  sync_disc_out : {sync_disc_out[0][0].item():0.4f}')
         self.scaler.scale(loss_gen).backward()
         return {'gen' : (loss_ret,self.audio_seq.shape[0])}
 
@@ -232,7 +234,7 @@ class Wav2MovTemplate(TemplateModel):
                                           is_real_target=True)*self.hparams['scales']['lambda_seq_disc']
             loss_ret = loss_gen.item()
             loss_gen /= self.accumulation_steps
-        self.logger.debug(f'gen_seq : {loss_gen.item():0.4f}')
+        self.logger.debug(f'[seq] gen_loss : {loss_gen.item():0.4f}')
         self.scaler.scale(loss_gen).backward()
         return {'gen':(loss_ret,self.fake_video_frames.shape[0])}
     

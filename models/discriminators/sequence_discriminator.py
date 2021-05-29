@@ -52,7 +52,7 @@ class SequenceDiscriminatorCNN(BaseModel):
         chs = [self.in_channels] + self.chs
         self.cnn = nn.ModuleList([
             nn.Sequential(nn.Conv3d(chs[i], chs[i+1], (3,4,4), (1,2,2),(1,1,1),bias=use_bias),
-                        #   nn.BatchNorm3d(chs[i+1]),
+                          nn.BatchNorm3d(chs[i+1]),
                           nn.LeakyReLU(0.2) ) for i in range(len(chs)-2)
             ])
         self.cnn.append(nn.Conv3d(chs[-2], chs[-1], (2, 4, 4), (2, 2, 2), (1, 1, 1)))

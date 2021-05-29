@@ -13,47 +13,6 @@ import matplotlib.pyplot as plt
 import os
 
 class SyncDiscriminator(BaseModel):
-    """
-    >>> self.disc = nn.Sequential(
-    >>>         nn.Conv1d(1, 4, 4, 2, 1),
-    >>>         nn.ReLU(),
-    >>>         nn.Conv1d(4, 1, 4, 2, 1),
-    >>>         nn.ReLU()
-    >>>         )
-    >>>
-    >>> self.desc_v = nn.Sequential(
-    >>>         nn.Conv2d(3,6,4,2,1),
-    >>>         nn.BatchNorm2d(6),
-    >>>         nn.ReLU(),
-    >>>         nn.Conv2d(6,32,4,2,1),
-    >>>         nn.BatchNorm2d(32),
-    >>>         nn.ReLU(),
-    >>>         nn.Conv2d(32,64,4,2,1),
-    >>>         nn.BatchNorm2d(64),
-    >>>         nn.ReLU(),
-    >>>         # nn.Conv2d(64,128,4,2,1),
-    >>>         # nn.BatchNorm2d(128),
-    >>>         # nn.ReLU(),
-    >>>         nn.Conv2d(64,1,4,2,1),
-    >>>         nn.ReLU()
-    >>>
-    >>>         )
-    >>>
-    >>> self.fc = nn.Sequential(
-    >>>         nn.Linear(166+16*16,256),
-    >>>         nn.ReLU(),
-    >>>         nn.Linear(256,128)
-    >>>         )
-
-    >>> def forward(self, audio_frame,video_frame):
-    >>>
-    >>>     batch_size = audio_frame.shape[0]
-    >>>     audio_frame = audio_frame.reshape(batch_size,1,-1)
-    >>>     video_embeddings = self.disc(audio_frame)
-    >>>     video_embeddings = torch.cat([video_embeddings.reshape(batch_size,-1),self.desc_v(video_frame).reshape(batch_size,-1)],dim=1)
-    >>>     return self.fc(video_embeddings)
-
-    """
 
     def __init__(self, hparams,config,use_bias=False):
         super().__init__()
