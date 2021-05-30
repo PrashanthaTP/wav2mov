@@ -8,18 +8,11 @@ from scipy.io.wavfile import write
 from wav2mov.core.data.collates import get_batch_collate
 from wav2mov.models.wav2mov_inferencer import Wav2movInferencer
 from wav2mov.main.data import get_dataloaders_v2 as get_dataloaders
-from wav2mov.utils.plots import save_gif
+from wav2mov.utils.plots import save_gif,save_video
 
-SAMPLE_NUM = 5
+SAMPLE_NUM = 10
 
-class Evaluator:
-    def __init__(self,config):
-        self.config = config
-    
-    def process_sample(self,sample):
-        pass
-    def run(self,model,test_dl):
-        pass      
+
 
 def squeeze_frames(video):
     batch_size,num_frames,*extra = video.shape 
@@ -62,13 +55,21 @@ def test_model(options,hparams,config,logger):
     save_path_real_video_frames = make_path_compatible(save_path_real_video_frames)
     save_path_ref_video_frame = make_path_compatible(save_path_ref_video_frame)
     
+    
+    save_video(hparams['data'],os.path.join(out_dir,'fake_video_without_audio.avi'),audio,denormalize_frames(fake_video_frames))
+    logger.debug(f'video saved : {fake_video_frames.shape}')
+    
     vutils.save_image(denormalize_frames(ref_video_frame),save_path_ref_video_frame,normalize=True)
     vutils.save_image(denormalize_frames(fake_video_frames),save_path_fake_video_frames,normalize=True)
     vutils.save_image(denormalize_frames(video),save_path_real_video_frames,normalize=True)
 
     gif_path = os.path.join(out_dir,f'fake_frames_{version}.gif')
     save_gif(gif_path,denormalize_frames(fake_video_frames))
+    gif_path = os.path.join(out_dir,f'real_frames_{version}.gif')
+    save_gif(gif_path,denormalize_frames(video))
     write(os.path.join(out_dir,f'audio_{SAMPLE_NUM}.wav'),16000,audio.cpu().numpy().reshape(-1))
+    logger.debug(f'audio saved : audio_{SAMPLE_NUM}.wav')
+
     logger.debug(f'results are saved in {out_dir}')
     
     msg = f'test_run for version {version}.\n'

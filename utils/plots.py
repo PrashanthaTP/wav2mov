@@ -79,7 +79,7 @@ def save_video(hparams,video_path,audio,video_frames):
     video_clip = mpy.VideoFileClip(video_path)
     audio_clip = mpy.AudioFileClip(temp_audio_path)
     video_clip.audio = audio_clip
-    video_clip.write_videofile(os.path.join(dir_name,'fake_audio_video.avi'),fps=hparams['video_fps'],codec='png')
+    video_clip.write_videofile(os.path.join(dir_name,'fake_video_with_audio.avi'),fps=hparams['video_fps'],codec='png')
     
 def save_video_v2(hparams,filepath,audio,video_frames):
     def get_video_frames(idx):
