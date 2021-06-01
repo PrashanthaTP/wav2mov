@@ -46,4 +46,4 @@ class AudioEnocoder(nn.Module):
         x.reshape(batch_size,num_frames,self.features_len)
         x,_ = self.gru(x)
         #B,seq_len,hidden_size
-        return self.final_act(x)  # shape (batch_size,8*8)
+        return self.final_act(x)  # shape (batch_size,num_frames,hidden_size=latent_dim_audio)
