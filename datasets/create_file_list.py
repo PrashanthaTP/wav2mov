@@ -5,7 +5,7 @@ from tqdm import tqdm
 FILENAME = 'filenames.txt'
 FILENAME_TRAIN = 'filenames_train.txt'
 FILENAME_TEST = 'filenames_test.txt'
-DATASET = 'grid_dataset_256_256'
+DATASET = 'grid_dataset_500_a23456'
 FROM_DIR = r''
 TO_DIR = r''
 if len(FROM_DIR)==0:
@@ -33,13 +33,15 @@ def write_to_file(file_path,content_list):
         
 def create_train_test_filelist(folders_list):
     total = len(folders_list)
-    random.shuffle(folders_list)
     n_train = int(0.9*total)
     n_test = total-n_train
-    write_to_file(os.path.join(TO_DIR,FILENAME_TRAIN),folders_list[:n_train])
+    train_list = folders_list[:n_train]
+    random.shuffle(train_list)
+    write_to_file(os.path.join(TO_DIR,FILENAME_TRAIN),train_list)
     write_to_file(os.path.join(TO_DIR,FILENAME_TEST),folders_list[n_train:])
 
 def main():
+ 
     folders = get_folders_list()
     # write_to_text_file(folders)
     create_train_test_filelist(folders)
