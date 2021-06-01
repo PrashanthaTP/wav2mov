@@ -63,18 +63,18 @@ class SyncDiscriminator(BaseModel):
         
         self.video_fc = nn.Sequential(nn.Linear(256*8*16,256*8),
                                       nn.BatchNorm1d(256*8),
-                                      nn.ReLU(),
+                                      nn.LeakyReLU(0.2),
                                       nn.Linear(256*8,256),
-                                      nn.ReLU())
+                                      nn.LeakyReLU(0.2))
         # self.fc = nn.Sequential(
         #     nn.Linear(256+256, 256),
         #     nn.ReLU(),
         #     nn.Linear(256, 128)
         #     )
         # self.slp = nn.Sequential(nn.Linear(1,1))
-        self.slp = nn.Sequential(nn.Linear(1,128),
-                                nn.ReLU(),
-                                nn.Linear(128,1))
+        # self.slp = nn.Sequential(nn.Linear(1,128),
+        #                         nn.ReLU(),
+        #                         nn.Linear(128,1))
         # self.slp = nn.Sequential(nn.Linear(256*2,128),
         #                         nn.ReLU(),
         #                         nn.Linear(128,1))
