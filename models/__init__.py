@@ -1,5 +1,5 @@
 from .discriminators.identity_discriminator import IdentityDiscriminator
-from .discriminators.sequence_discriminator import SequenceDiscriminatorCNN,SequenceDiscriminator
+from .discriminators.sequence_discriminator import SequenceDiscriminator
 from .discriminators.sync_discriminator import SyncDiscriminator
 from .discriminators.patch_disc import PatchDiscriminator
 from .generator.frame_generator import Generator

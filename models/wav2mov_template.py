@@ -5,7 +5,7 @@ from torch.cuda import amp
 from torch.optim.lr_scheduler import StepLR
 from wav2mov.core.models.template import TemplateModel
 from wav2mov.models import  (Generator,
-                            SequenceDiscriminator, SequenceDiscriminatorCNN,
+                            SequenceDiscriminator, 
                             IdentityDiscriminator,
                             PatchDiscriminator,
                             SyncDiscriminator)
@@ -37,7 +37,7 @@ class Wav2MovTemplate(TemplateModel):
 
     def init_models(self):
         self.gen = Generator(self.hparams['gen'])
-        self.seq_disc = SequenceDiscriminatorCNN(self.hparams['disc']['sequence_disc_cnn'])
+        self.seq_disc = SequenceDiscriminator(self.hparams['disc']['sequence_disc_cnn'])
         # self.id_disc = PatchDiscriminator(self.hparams['disc']['patch_disc'])
         self.id_disc = IdentityDiscriminator(self.hparams['disc']['identity_disc'])
         self.sync_disc = SyncDiscriminator(self.hparams['disc']['sync_disc'],self.config)
