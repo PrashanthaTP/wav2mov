@@ -22,20 +22,21 @@ class SyncDiscriminator(BaseModel):
         self.disc_a = nn.Sequential(
             nn.Conv1d(1, 64, 494, 50,bias=use_bias),#input 5994 output (5994-494+0)/50 + 1 = 111
             nn.BatchNorm1d(64),
-            nn.ReLU(),
+            nn.LeakyReLU(0.2),
             nn.Conv1d(64, 128, 4, 1,bias=use_bias),#((111-4+0)/1)+1 =108
             nn.BatchNorm1d(128),
-            nn.ReLU(),
+            nn.LeakyReLU(0.2),
             nn.Conv1d(128, 256,4,2,1),#((108-4+2)/2)+1 = 53 +1 = 54
             nn.BatchNorm1d(256),
-            nn.ReLU(),
+            nn.LeakyReLU(0.2),
             nn.Conv1d(256, 256,4,2),#((54-4)/2)+1 = 25 + 1 = 26
-            nn.ReLU()
+            nn.LeakyReLU(0.2),
             )
         self.audio_fc = nn.Sequential(nn.Linear(26*256,5*256),
-                                      nn.ReLU(),
+                                      nn.LeakyReLU(0.2),
                                       nn.Linear(5*256,256),
-                                      nn.ReLU())
+                                      nn.LeakyReLU(0.2),
+                                      )
         # height and width are halved in each step
         self.pre_disc_v = nn.Sequential(
             nn.Conv3d(self.hparams['in_channels'], 32, (5,4,4), (1,2,2),(0,1,1), bias=use_bias),
