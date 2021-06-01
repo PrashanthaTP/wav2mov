@@ -4,24 +4,24 @@
 	"device": "cuda",
 	"img_size": 256,
 	"num_epochs": 4,
-	"pre_learning_epochs":10,
+	"pre_learning_epochs":100,
 	"img_channels": 3,
-	"num_frames_fraction":10,
+	"num_frames_fraction":15,
 	"data": {
 		"img_size":256,
 		"img_channels":3,
 		"coarticulation_factor": 2,
 		"audio_sf": 16000,
 		"video_fps": 24,
-		"batch_size": 6,
-		"mini_batch_size": 6,
+		"batch_size": 5,
+		"mini_batch_size": 5,
 		"mean": 0.516,
 		"std": 0.236
 	},
 	"disc": {
 		"sync_disc": {
 			"in_channels": 3,
-			"lr": 1e-5
+			"lr": 1e-4
 		},
 		"sequence_disc":{
 			"in_channels": 3,
@@ -59,10 +59,10 @@
 		},
 
 	"scales": {
-		"lambda_seq_disc": 0.2,
-		"lambda_sync_disc": 0.6,
-		"lambda_id_disc": 100,
-		"lambda_L1": 100
+		"lambda_seq_disc": 0.5,
+		"lambda_sync_disc": 1,
+		"lambda_id_disc": 1,
+		"lambda_L1": 50
 	},
 	 "scheduler":{
       "gen":{
