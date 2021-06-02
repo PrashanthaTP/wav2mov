@@ -32,6 +32,8 @@ def get_logger(config,filehandler_required=False):
     return local_logger
 
 def preprocess(preprocess_logger,config):
+    if options.grid_dataset_dir:
+        config.update('grid_dataset_dir',options.grid_dataset_dir)
     create_from_grid_dataset(config,preprocess_logger)
 
 def train(train_logger,args_options,config):

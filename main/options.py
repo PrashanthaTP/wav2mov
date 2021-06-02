@@ -45,6 +45,9 @@ class Options():
                                 choices=['y','n','yes','no'],
                                 type=str,help='run preprocess script')
         
+        self.parser.add_argument('--grid_dataset_dir','-grid',
+                                    type=str,
+                                    help="path of raw dataset")
         # self.parser.add_argument('--device',
         #                          default='cuda',
         #                         choices=['cpu','cuda'],
