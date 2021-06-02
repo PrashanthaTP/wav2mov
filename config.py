@@ -63,7 +63,13 @@ class Config :
             obj = cls(v)
             obj._update_vals_from_dict(configs)
             return obj
-    
+        
+    def update(self,key,value):
+        if key in self.vals:
+            logger.warning(f'Updating existing parameter {key} : changing from {self.vals[key]} with {value}')
+        
+        self.vals[key] = value 
+        
     def __getitem__(self,item):
         if item not in self.vals:
             logger.error(f'{self.__class__.__name__}  object has no key called {item}')
