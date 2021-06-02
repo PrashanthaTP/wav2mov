@@ -162,10 +162,12 @@ class GridDataset(RawDataset):
         self.samples_count = min(len(videos[0]),self.samples_count)
         limit = self.samples_count 
         progress_bar = tqdm(enumerate(videos[0][:limit]),
-                            desc="Grid Dataset",
+                            desc="Processing Grid Dataset",
                             total=len(videos[0][:limit]), ascii=True, colour="green") if show_progress_bar else enumerate(videos[0][:limit])
         
         for idx,video_filename in progress_bar:
+            if isinstance(progress_bar,tqdm):
+                progress_bar.set_postfix({'file':video_filename})
             audio_filename = video_filename.split('.')[0] + '.wav'
             video_path = os.path.join(video_folder, video_filename)
             audio_path = os.path.join(audio_folder, audio_filename)
