@@ -126,7 +126,9 @@ def get_dataloaders_v2(options,config,params,shuffle=True,collate_fn=None):
 def get_video_mean_and_std(root_dir,filenames,img_channels):
     channels_sum,channels_squared_sum,num_batches = 0,0,0
     # num_items = 0
-    for _,filename in tqdm(enumerate(filenames),ascii=True,total=len(filenames),desc='video'):
+    progress_bar = tqdm(enumerate(filenames),ascii=True,total=len(filenames),desc='video')
+    for _,filename in progress_bar:
+        progress_bar.set_postfix({'file':filename})
         video_path = os.path.join(root_dir,filename,'video_frames.npy')
         video = torch.from_numpy(np.load(video_path))
         video = video/255 #of shape (F,H,W,C)
@@ -148,7 +150,9 @@ def get_video_mean_and_std(root_dir,filenames,img_channels):
     
 def get_audio_mean_and_std(root_dir,filenames):
     running_mean_sum , running_squarred_mean_sum =  0,0
-    for _,filename in tqdm(enumerate(filenames),ascii=True,total=len(filenames),desc='audio'):
+    progress_bar = tqdm(enumerate(filenames),ascii=True,total=len(filenames),desc='audio')
+    for _,filename in progress_bar:
+        progress_bar.set_postfix({'file':filename})   
         audio_path = os.path.join(root_dir,filename,'audio.npy')
         audio = torch.from_numpy(np.load(audio_path))
         running_mean_sum += torch.mean(audio)
