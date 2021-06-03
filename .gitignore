@@ -4,6 +4,8 @@ datasets/*
 !datasets/create_file_list.py
 runs/
 logs/
+tests/res
+plans/*.txt
 *.png
 !plan_v1.png
 !components.png

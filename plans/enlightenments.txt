@@ -1,9 +1,0 @@
-# Unet 
-
-    + Significance of U shape
-
-        + The contraction path leads to a compressed representation so 
-        the model learns to represent the input using optimized quantity of features
-
-        + The expansion path teaches the model to give attention to the actual position of those features
-        so as to construct the original image.
