@@ -13,7 +13,7 @@ class IdEncoder(nn.Module):
         self.hparams = hparams
         in_channels = hparams['in_channels']
         chs = self.hparams['chs']
-        chs = [in_channels] + chs +[1]
+        chs = [in_channels] + chs +[1]# 1 is added here not in params because see how channels are being used in  id_decoder 
         padding = get_same_padding(kernel_size=4,stride=2)
         self.conv_blocks = nn.ModuleList(Conv2dBlock(chs[i],chs[i+1],
                                                      kernel_size=(4,4),
