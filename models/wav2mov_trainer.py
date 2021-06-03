@@ -163,8 +163,8 @@ class Wav2Mov(TemplateModel):
         #   self.video = real_video_frames
         #   for _ in self.__get_sub_batch(fraction=self.hparams['num_frames_fraction']):pass
 
-        ret['fake_video_frames'] = self.swap_channel_frame_axes(self.fake_video_frames)
-        ret['real_video_frames'] = self.swap_channel_frame_axes(real_video_frames)
+        ret['fake_video_frames'] = self.swap_channel_frame_axes(self.fake_video_frames) if for_sync_disc else self.fake_video_frames
+        ret['real_video_frames'] = self.swap_channel_frame_axes(real_video_frames) if for_sync_disc else real_video_frames 
 
         if not for_sync_disc:
           return ret
