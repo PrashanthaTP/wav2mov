@@ -7,17 +7,18 @@ from wav2mov.main.data import get_dataloaders_v2 as get_dataloaders
 
 
 
+
 def train_model(options,hparams,config,logger):
     engine = Engine(options,hparams,config,logger)
     model = Wav2Mov(hparams,config,logger)
     collate_fn = get_batch_collate(hparams['data'])
     dataloaders_ntuple = get_dataloaders(options,config,hparams,
                                          collate_fn=collate_fn)
-    callbacks = [LossMetersCallback(options,hparams,logger,
+    callbacks = [LossMetersCallback(options,hparams,config,logger,
                                     verbose=True),
-                LoggingCallback(options,hparams,config,logger),
+                 LoggingCallback(options,hparams,config,logger),
                  TimeTrackerCallback(hparams,logger),
-                 ModelCheckpoint(model,hparams,config,
+                 ModelCheckpoint(model,hparams,config,logger,
                                  save_every=5)]
     
     engine.run(model,dataloaders_ntuple,callbacks)

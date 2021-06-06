@@ -1,4 +1,7 @@
+from collections import defaultdict
+import os
 import time
+import torch
 from wav2mov.core.engine.callbacks import Callbacks
 
 from wav2mov.logger import TensorLogger
@@ -32,14 +35,39 @@ class TensorBoardCallback(Callbacks):
         for name, value in losses.items():
             writer_name = 'writer_' + name
             self.tensor_logger.add_scalar(writer_name, scalar_type+'_'+name, value, global_step)
-            
-class LossMetersCallback(Callbacks):
-    def __init__(self,options,hparams,logger,verbose=True):
+
+class LoggingCallback(Callbacks):
+    def __init__(self,options,hparams,config,logger) :
         self.options = options
         self.hparams = hparams
+        self.config = config
+        self.logger = logger
+        
+    def on_run_start(self,state):
+        self.logger.info(f'[RUN] version {self.config.version}')
+        accumulation_steps = self.hparams['data']['batch_size']//self.hparams['data']['mini_batch_size']
+        num_batches = state.num_batches//accumulation_steps
+        self.logger.debug(f'[DATALOADER] num_videos {self.options.num_videos}')
+        self.logger.debug(f'[DATALOADER] min_batch_size {self.hparams["data"]["mini_batch_size"]}')
+        self.logger.debug(f'[DATALOADER] batch_size {self.hparams["data"]["batch_size"]}')
+        self.logger.debug(f'[DATALOADER] total batches {num_batches}')
+        self.logger.debug(f'[RUN] num_epochs : {self.hparams["num_epochs"]} | pre_learning_epochs : {self.hparams["pre_learning_epochs"]}')
+        
+    def on_run_end(self,state):
+        self.logger.debug(f'[Run] version {self.config.version}')
+
+class LossMetersCallback(Callbacks):
+    def __init__(self,options,hparams,config,logger,verbose=True):
+        self.options = options
+        self.hparams = hparams
+        self.config = config
         self.logger = logger
         self.verbose = verbose
         self.accumulation_steps = self.hparams['data']['batch_size']//self.hparams['data']['mini_batch_size']
+        
+        self.losses = defaultdict(list)
+
+        # m_logger.warning(f'checking m_logger {m_logger.name} {m_logger.level}')
         
     def on_train_start(self,state):
         self.batch_loss_meter = AverageMetersList(('id',
@@ -77,18 +105,47 @@ class LossMetersCallback(Callbacks):
             batch_avg_loss = self.batch_loss_meter.average()
             self.epoch_loss_meter.update(self.update_with_multiplier(batch_avg_loss,batch_size))
             if self.verbose:
-                self.logger.info(self.batch_progress_meter.get_display_str(batch_idx+1))
-                
+                self.logger.info(self.batch_progress_meter.get_display_str((batch_idx+1)//self.accumulation_steps))
+            self.batch_loss_meter.reset()
+
     def on_epoch_end(self,state):
         epoch = state.epoch
-        losses = self.batch_loss_meter.average()#name,value
-        # losses = {name : (value,1) for name,value in losses.items()}
-        losses = self.update_with_multiplier(losses,multiplier=1)
-        self.epoch_loss_meter.update(losses)
-        if self.verbose:
-            self.logger.info(self.epoch_progress_meter.get_display_str(epoch+1))
-    
+        losses = self.epoch_loss_meter.average()#name,value
 
+        for name,value in losses.items():
+          self.losses[name].append(value)
+        # self.logger.debug(self.losses)
+        self.logger.debug(losses)
+        # raise ValueError('stop')
+
+        # losses = {name : (value,1) for name,value in losses}
+        # losses = self.update_with_multiplier(losses,multiplier=1)
+        # self.epoch_loss_meter.update(losses)
+        if self.verbose:
+            m_logger.debug("="*25)
+            self.logger.info(self.epoch_progress_meter.get_display_str(epoch+1))
+            m_logger.debug("="*25)
+        
+        if epoch % 5 == 0:
+            self.save_losses(state)
+
+    def save_losses(self,state):
+        self.losses['epochs'] = [state.start_epoch,state.epoch]
+        DIR = os.path.join(self.config['runs_dir'],'losses')
+        os.makedirs(DIR,exist_ok=True)
+        path = os.path.join(DIR,f'losses_{self.config.version}.pt')
+        torch.save(self.losses,path)
+        self.logger.debug(f'Loss values are saved : {path}')
+
+    def on_run_end(self,state):
+        # self.losses['epochs'] = [state.start_epoch,state.epoch]
+        # DIR = os.path.join(self.config['runs_dir'],'losses')
+        # os.makedirs(DIR,exist_ok=True)
+        # path = os.path.join(DIR,f'losses_{self.config.version}.pt')
+        # torch.save(self.losses,path)
+        # self.logger.debug(f'Loss values are saved : {path}')
+        self.save_losses(state)
+        
     def update_with_multiplier(self,losses,multiplier):
         updated = {}
         for name,value in losses.items():
@@ -115,10 +172,11 @@ class TimeTrackerCallback(Callbacks):
     
     def on_batch_end(self,state):
         batch_idx = state.batch_idx
-        if batch_idx+1==self.num_batches:
+        if (batch_idx+1)%self.accumulation_steps==0:
             duration_sec = (time.time()-self.batch_start_time)
             duration_min = duration_sec/60
-            self.logger.debug(f'[BATCH_TIME] batch {batch_idx+1} took {duration_min:0.2f} minutes or {duration_sec:0.2f} seconds.')
+            self.logger.debug(f'[BATCH_TIME] batch {(batch_idx+1)//self.accumulation_steps} took {duration_min:0.2f} minutes or {duration_sec:0.2f} seconds.')
+            self.batch_start_time = time.time()
             
     def on_epoch_end(self, state):
         epoch = state.epoch
@@ -132,10 +190,11 @@ class TimeTrackerCallback(Callbacks):
         
 
 class ModelCheckpoint(Callbacks):
-    def __init__(self,model,hparams,config,save_every):
+    def __init__(self,model,hparams,config,logger,save_every):
         self.model = model
         self.hparams = hparams
         self.config = config
+        self.logger = logger
         self.are_hparams_saved = False
         self.save_every = save_every
         
@@ -146,24 +205,9 @@ class ModelCheckpoint(Callbacks):
             if not self.are_hparams_saved:
                 #to avoid multiple file writes as hparams not edited anywhere after initial setup
                 self.hparams.save(self.config['params_checkpoint_fullpath'])
+                self.logger.debug(f'hparams saved.')
                 self.are_hparams_saved = True
+            self.logger.debug(f'Model saved.')
                 
     def on_train_end(self,state):
         self.model.save(state.epoch)
-        
-        
-class LoggingCallback(Callbacks):
-    def __init__(self,options,hparams,config,logger) :
-        self.options = options
-        self.hparams = hparams
-        self.config = config
-        self.logger = logger
-    def on_run_start(self,state):
-        self.logger.info(f'[RUN] version {self.config.version}')
-        accumulation_steps = self.hparams['data']['batch_size']//self.hparams['data']['mini_batch_size']
-        num_batches = state.num_batches//accumulation_steps
-        self.logger.debug(f'[DATALOADER] min_batch_size {self.hparams["data"]["mini_batch_size"]}')
-        self.logger.debug(f'[DATALOADER] batch_size {self.hparams["data"]["batch_size"]}')
-        self.logger.debug(f'[DATALOADER] total batches {num_batches}')
-        
-        self.logger.debug(f'[RUN] num_epochs : {self.hparams["num_epochs"]} | pre_learning_epochs : {self.hparams["pre_learning_epochs"]}')
