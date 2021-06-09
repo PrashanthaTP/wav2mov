@@ -21,7 +21,8 @@
 	"disc": {
 		"sync_disc": {
 			"in_channels": 3,
-			"lr": 1e-4
+			"lr": 1e-4,
+			"relu_neg_slope":0.01
 		},
 		"sequence_disc":{
 			"in_channels": 3,

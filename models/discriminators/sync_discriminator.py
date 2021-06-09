@@ -13,35 +13,35 @@ import matplotlib.pyplot as plt
 import os
 
 class SyncDiscriminator(BaseModel):
-
     def __init__(self, hparams,config,use_bias=False):
         super().__init__()
         self.hparams = hparams 
         self.config = config
         #5 frames of 666 :3330
+        self.relu_neg_slope = self.hparams['relu_neg_slope'] 
         self.disc_a = nn.Sequential(
             nn.Conv1d(1, 64, 494, 50,bias=use_bias),#input 5994 output (5994-494+0)/50 + 1 = 111
             nn.BatchNorm1d(64),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(self.relu_neg_slope),
             nn.Conv1d(64, 128, 4, 1,bias=use_bias),#((111-4+0)/1)+1 =108
             nn.BatchNorm1d(128),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(self.relu_neg_slope),
             nn.Conv1d(128, 256,4,2,1),#((108-4+2)/2)+1 = 53 +1 = 54
             nn.BatchNorm1d(256),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(self.relu_neg_slope),
             nn.Conv1d(256, 256,4,2),#((54-4)/2)+1 = 25 + 1 = 26
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(self.relu_neg_slope),
             )
         self.audio_fc = nn.Sequential(nn.Linear(26*256,5*256),
-                                      nn.LeakyReLU(0.2),
+                                      nn.LeakyReLU(self.relu_neg_slope),
                                       nn.Linear(5*256,256),
-                                      nn.LeakyReLU(0.2),
+                                      nn.LeakyReLU(self.relu_neg_slope),
                                       )
         # height and width are halved in each step
         self.pre_disc_v = nn.Sequential(
             nn.Conv3d(self.hparams['in_channels'], 32, (5,4,4), (1,2,2),(0,1,1), bias=use_bias),
             nn.BatchNorm3d(32),
-            nn.LeakyReLU(0.2))
+            nn.LeakyReLU(self.relu_neg_slope))
 
         ##############################################
         #pre_disc_V : F :5 ==> ((5-5)+0)/1) + 1 =>1 
@@ -52,20 +52,20 @@ class SyncDiscriminator(BaseModel):
         self.disc_v = nn.Sequential( 
             nn.Conv2d(32, 64, 4, 2, 1,bias=use_bias), # #H_new = 32, W_new = 64     
             nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2),  
+            nn.LeakyReLU(self.relu_neg_slope),  
             nn.Conv2d(64, 128, 4, 2, 1,bias=use_bias), #H_new,W_new = 16,32
             nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
+            nn.LeakyReLU(self.relu_neg_slope),
             nn.Conv2d(128, 256, 4, 2, 1),  #H_new,W_new = 8,16
-            nn.LeakyReLU(0.2)
+            nn.LeakyReLU(self.relu_neg_slope)
 
         )
         
         self.video_fc = nn.Sequential(nn.Linear(256*8*16,256*8),
                                       nn.BatchNorm1d(256*8),
-                                      nn.LeakyReLU(0.2),
+                                      nn.LeakyReLU(self.relu_neg_slope),
                                       nn.Linear(256*8,256),
-                                      nn.LeakyReLU(0.2))
+                                      nn.LeakyReLU(self.relu_neg_slope))
         # self.fc = nn.Sequential(
         #     nn.Linear(256+256, 256),
         #     nn.ReLU(),
