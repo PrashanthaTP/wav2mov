@@ -1,4 +1,3 @@
-from itertools import filterfalse
 import torch
 from torch import nn
 
@@ -41,7 +40,6 @@ class Conv2dBlock(nn.Module):
         self.act = nn.LeakyReLU(0.2) if act is None else act
         self.norm = nn.BatchNorm2d(out_ch)
         self.conv = nn.Conv2d(in_ch,out_ch,kernel_size,stride,padding,bias=self.use_norm)
-        self.relu = nn.LeakyReLU(0.2) if act is None else act
         
     def forward(self,x):
         x = self.conv(x)
