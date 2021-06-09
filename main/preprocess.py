@@ -8,7 +8,7 @@ import os
 
 
 from wav2mov.core.data import RawDataset, GridDataset
-
+from wav2mov.datasets import create_file_list as create_file_list_module
 
 # currently these are not applied anywhere
 # audio file in util to see which values are being used instead.
@@ -19,7 +19,7 @@ win_hop = 0.033
 
 
 
-def create(raw_dataset: RawDataset,config) -> str:
+def create(raw_dataset: RawDataset,config,logger) -> str:
     """ Creates numpy file containing video and audio frames from given dataset
            
     Args:
@@ -62,6 +62,10 @@ def create(raw_dataset: RawDataset,config) -> str:
     log = f'Samples generated : {samples_count}\n'
     log += f'Location : { dataset_dir }\n'
     log += f'Filenames are listed in filenames.txt\n'
+    logger.info(log)
+    create_file_list_module.main()
+    logger.debug('train and test filelists created')
+    
     return log
 
 
@@ -71,9 +75,9 @@ def create_from_grid_dataset(config,logger):
                           video_frame_rate=video_frame_rate,
                           samples_count=125)
 
-    log = create(dataset,config)
+    create(dataset,config,logger)
     print(f'{dataset.__class__.__name__} successfully processed.')
-    logger.info(log)
+    # logger.info(log)
 
 
 if __name__ == '__main__':
