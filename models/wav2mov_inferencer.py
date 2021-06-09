@@ -1,6 +1,6 @@
 import random
 import torch
-from wav2mov.core.models.template import TemplateModel
+from wav2mov.core.models import TemplateModel
 from wav2mov.core.data.utils import AudioUtil
 
 from wav2mov.models import Generator

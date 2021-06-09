@@ -1,7 +1,7 @@
 import os
 
 from wav2mov.core.engine import TemplateEngine
-from wav2mov.core.engine import CallbackDispatcher,Callbacks,CallbackEvents as Events
+from wav2mov.core.engine import CallbackEvents as Events
 
 
 class State:
@@ -27,14 +27,6 @@ class Engine(TemplateEngine):
         self.hparams = hparams
         self.options = options
         self.config = config
-    
-    def on_run_start(self,model,train_dl):
-        #log 
-        # accumulation_steps = self.hparams['data']['batch_size']//self.hparams['data']['mini_batch_size']
-        # num_batches = len(train_dl)//accumulation_steps
-        # self.logger.info('options num_videos : {self.options.num_videos}')
-        # self.logger.info(f'train_dl : len(train_dl) :{len(train_dl)} : num_batches: {num_batches}')
-       pass 
     
     def load_checkpoint(self,model):
         prev_epoch = 0
