@@ -1,10 +1,10 @@
 {
 	"seed": 10,
 	"ref_frame_idx":-10,
-	"device": "cuda",
+	"device": "cpu",
 	"img_size": 256,
 	"num_epochs": 4,
-	"pre_learning_epochs":100,
+	"pre_learning_epochs":50,
 	"img_channels": 3,
 	"num_frames_fraction":15,
 	"data": {
@@ -13,8 +13,8 @@
 		"coarticulation_factor": 2,
 		"audio_sf": 16000,
 		"video_fps": 24,
-		"batch_size": 5,
-		"mini_batch_size": 5,
+		"batch_size": 6,
+		"mini_batch_size": 6,
 		"mean": 0.516,
 		"std": 0.236
 	},
@@ -48,7 +48,7 @@
 	
 
 	"gen": {
-			"in_channels":1,
+			"in_channels":3,
 			"chs":[64,128,256,512,1024],
 			"latent_dim":282,
 			"latent_dim_id":[8,8],
