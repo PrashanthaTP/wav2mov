@@ -7,7 +7,7 @@ from scipy.io.wavfile import write
 
 from wav2mov.core.data.collates import get_batch_collate
 from wav2mov.models.wav2mov_inferencer import Wav2movInferencer
-from wav2mov.main.data import get_dataloaders_v2 as get_dataloaders
+from wav2mov.main.data import get_dataloaders
 from wav2mov.utils.plots import save_gif,save_video
 
 SAMPLE_NUM = 10
