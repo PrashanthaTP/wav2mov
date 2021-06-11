@@ -6,6 +6,7 @@ logger = get_module_level_logger(__name__)
 
 def get_same_padding(kernel_size,stride,in_size=0):
     """https://stanford.edu/~shervine/teaching/cs-230/cheatsheet-convolutional-neural-networks
+       https://github.com/DinoMan/speech-driven-animation/blob/dc9fe4aa77b4e042177328ea29675c27e2f56cd4/sda/utils.py#L18-L21
     
     padding = 'same'
         • Padding such that feature map size has size In_size/Stride
@@ -13,9 +14,17 @@ def get_same_padding(kernel_size,stride,in_size=0):
         • Output size is mathematically convenient
         
         • Also called 'half' padding
+        
+    out = (in-k+2*p)/s + 1
+    if out == in/s:
+    in/s = (in-k+2*p)/s + 1 
+    ((in/s)-1)*s + k -in = 2*p
+    (in-s)+k-in = 2*p
+    in case of s==1:
+        p = (k-1)/2
     """
     out_size = ceil(in_size/stride)
-    return ceil(((out_size-1)*stride+ kernel_size-1)/2)#(k-1)//2 for same padding
+    return ceil(((out_size-1)*stride+ kernel_size-in_size)/2)#(k-1)//2 for same padding
 
 def init_weights(net, init_type='normal', init_gain=0.02):
     """Initialize network weights.
