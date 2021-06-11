@@ -24,6 +24,35 @@ class DoubleConv2dBlock(nn.Module):
           x = self.batch_norm(x) 
         return self.relu(self.conv2(self.relu(x)))
 
+class Conv1dBlock(nn.Module):
+    def __init__(self,
+                 in_ch,
+                 out_ch,
+                 kernel_size,
+                 stride,
+                 padding,
+                 use_norm=True,
+                 use_act=True,act=None,
+                 residual=False):
+        
+        super().__init__()
+        self.use_norm = use_norm
+        self.use_act = use_act
+        self.act = nn.LeakyReLU(0.2) if act is None else act
+        self.norm = nn.BatchNorm1d(out_ch)
+        self.conv = nn.Conv1d(in_ch,out_ch,kernel_size,stride,padding,bias=self.use_norm)
+        self.residual = residual
+
+    def forward(self,in_x):
+        x = self.conv(in_x)
+        if self.use_norm:
+            x = self.norm(x)
+        if self.residual:
+            x += in_x
+        if self.use_act:
+            x = self.act(x)
+        return x
+    
 class Conv2dBlock(nn.Module):
     def __init__(self,
                  in_ch,
@@ -32,7 +61,8 @@ class Conv2dBlock(nn.Module):
                  stride,
                  padding,
                  use_norm=True,
-                 use_act=True,act=None):
+                 use_act=True,act=None,
+                 residual=False):
         
         super().__init__()
         self.use_norm = use_norm
@@ -40,11 +70,14 @@ class Conv2dBlock(nn.Module):
         self.act = nn.LeakyReLU(0.2) if act is None else act
         self.norm = nn.BatchNorm2d(out_ch)
         self.conv = nn.Conv2d(in_ch,out_ch,kernel_size,stride,padding,bias=self.use_norm)
-        
-    def forward(self,x):
-        x = self.conv(x)
+        self.residual = residual
+
+    def forward(self,in_x):
+        x = self.conv(in_x)
         if self.use_norm:
             x = self.norm(x)
+        if self.residual:
+            x += in_x
         if self.use_act:
             x = self.act(x)
         return x
