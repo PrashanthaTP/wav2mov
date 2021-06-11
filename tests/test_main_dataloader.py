@@ -1,17 +1,15 @@
 import torch
-
 from wav2mov.core.data.collates import get_batch_collate
 from wav2mov.params import params
 from wav2mov.config import get_config
 from wav2mov.logger import get_module_level_logger
-
-from wav2mov.main.data import get_dataloaders_v2
+from wav2mov.main.data import get_dataloaders
 from wav2mov.main.options import Options
 
 logger = get_module_level_logger(__name__)
 def test(options,hparams,config):
     collate_fn = get_batch_collate(hparams['data'])
-    dataloader_pack = get_dataloaders_v2(options,config,params,collate_fn=collate_fn)
+    dataloader_pack = get_dataloaders(options,config,params,collate_fn=collate_fn)
     train_dl,test_dl = dataloader_pack
     logger.debug(f'train : {len(train_dl)} test : {len(test_dl)}')
     
@@ -30,4 +28,3 @@ def main():
 if __name__ == '__main__':
     main()
      
-
