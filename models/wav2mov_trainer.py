@@ -10,7 +10,6 @@ from wav2mov.core.data.utils import AudioUtil
 
 from wav2mov.models.wav2mov_template import Wav2MovTemplate
 
-
 class Wav2MovTrainer(TemplateModel):
     def __init__(self,hparams,config,logger):
         super().__init__()
@@ -30,7 +29,6 @@ class Wav2MovTrainer(TemplateModel):
     def forward(self,*args,**kwargs):
         return self.model(*args,**kwargs)
 
-    
     def __get_stride(self):
         return self.hparams['data']['audio_sf']//self.hparams['data']['video_fps']
     
@@ -65,7 +63,6 @@ class Wav2MovTrainer(TemplateModel):
     def on_batch_start(self,state):
         self.clear_input()
 
-        
     def setup_input(self,batch,state):
         audio,audio_frames,video = batch
         audio,audio_frames,video = self.to_device(audio,audio_frames,video)
@@ -74,6 +71,7 @@ class Wav2MovTrainer(TemplateModel):
         self.audio_frames = audio_frames
         self.video = video
         self.logger.debug(f'input {video.shape}')
+        
     def squeeze_frames(self,item):
         batch_size,num_frames,*extra = item.shape
         return item.reshape(batch_size*num_frames,*extra)
@@ -104,14 +102,9 @@ class Wav2MovTrainer(TemplateModel):
         return ref_frames
     
     def add_fake_frames(self,frames):
-        # frames = frames.reshape(batch_size,num_frames,*extra)#from B*F,C,H,W to B,F,C,H,W
         fake_frames = [self.fake_video_frames,frames] if self.fake_video_frames is not None else [frames]
-        # self.logger.debug(f'line no 396 | frames {frames.shape} target shape {batch_size,num_frames}{extra} ')
         self.fake_video_frames = torch.cat(fake_frames,dim=1)
     
-    def swap_channel_frame_axes(self,video):
-        return video.permute(0,2,1,3,4)#B,F,C,H,W to B,C,F,H,W
-
     def re_gen(self,fraction):
         # self.logger.debug(f'line 503 fake_video_frames : {self.fake_video_frames.shape}')
         self.fake_video_frames = None
@@ -123,11 +116,9 @@ class Wav2MovTrainer(TemplateModel):
             batch = {}
             # self.logger.debug(f'inside sub batching with fraction {fraction} of {num_frames} frames| {start_fraction} : {end_fraction}')
             batch['real_video_frames'] = self.video[:,start_fraction:end_fraction,:,:,:]
-            # batch['real_video_frames']  = self.squeeze_frames(real_video_frames)
             batch['ref_video_frames'] = self.get_ref_frames(batch['real_video_frames'])
-            # batch['ref_video_frames'] = self.squeeze_frames(ref_video_frames)
+      
             audio_frames = self.audio_frames[:,start_fraction:end_fraction,:]
-            # audio_frames = self.squeeze_frames(audio_frames)
             batch['fake_video_frames'] = self(audio_frames,batch['ref_video_frames']) 
             self.add_fake_frames(batch['fake_video_frames'])
             
@@ -139,22 +130,27 @@ class Wav2MovTrainer(TemplateModel):
 
         OFFSET_SYNC_OUT_OF_SYNC = 15
         NUM_FRAMES_ACTUAL = self.video.shape[1] #num_frames is present in 2nd dimension now.(B,F,C,H,W)
-        NUM_FRAMES_FOR_SYNC = 5 if for_sync_disc else 10
+        NUM_FRAMES_FOR_SYNC = 5 if for_sync_disc else 15
+
         if for_sync_disc:
           NUM_FRAMES_REQ_MIN =  OFFSET_SYNC_OUT_OF_SYNC + 2*NUM_FRAMES_FOR_SYNC 
           if NUM_FRAMES_ACTUAL < NUM_FRAMES_REQ_MIN: 
               raise ValueError(f'Given video should atleast have {NUM_FRAMES_REQ_MIN} frames. Instead given video has {NUM_FRAMES_ACTUAL} frames')
 
-        randpos = random.randint(0, self.video.shape[1]-NUM_FRAMES_FOR_SYNC-OFFSET_SYNC_OUT_OF_SYNC) if for_sync_disc else 0
+        randpos_limit = self.video.shape[1]-NUM_FRAMES_FOR_SYNC
+        if for_sync_disc:
+            randpos_limit -= OFFSET_SYNC_OUT_OF_SYNC
+            
+        randpos = random.randint(0,randpos_limit)
         real_video_frames = self.video[:, randpos:randpos+NUM_FRAMES_FOR_SYNC, ...]
         audio_frames = self.audio_frames[:,randpos:randpos+NUM_FRAMES_FOR_SYNC,:]
 
         ref_frames = self.get_ref_frames(real_video_frames)
         self.fake_video_frames = self(audio_frames,ref_frames)
  
-        ret['fake_video_frames'] = self.swap_channel_frame_axes(self.fake_video_frames) if for_sync_disc else self.fake_video_frames
-        ret['real_video_frames'] = self.swap_channel_frame_axes(real_video_frames) if for_sync_disc else real_video_frames 
-
+        ret['fake_video_frames'] = self.fake_video_frames
+        ret['real_video_frames'] = real_video_frames 
+     
         if not for_sync_disc:
           return ret
 
@@ -190,16 +186,16 @@ class Wav2MovTrainer(TemplateModel):
             
     def __optimize(self,adversarial):     
         self.fake_video_frames = None
-        FRACTION = self.hparams['num_frames_fraction']
+        num_frames_fraction = self.hparams['num_frames_fraction']
         losses = {'gen':(0.0,0),
                   'id':(0.0,0),
                   'l1':(0.0,0),
                   'sync':(0.0,0),
                   'seq':(0.0,0)}       
           
-        for sub_batch in self.__get_sub_batch(fraction=FRACTION):
+        for sub_batch in self.__get_sub_batch(fraction=num_frames_fraction):
             self.model.set_input(sub_batch)
-            loss_id_dict = self.model.optimize_id(adversarial=adversarial,scale=FRACTION)
+            loss_id_dict = self.model.optimize_id(adversarial=adversarial,scale=num_frames_fraction)
             losses = self._merge_losses(losses,loss_id_dict)
         
         self.model.step_id_disc()
@@ -207,25 +203,24 @@ class Wav2MovTrainer(TemplateModel):
         if adversarial and  self.train_sync_expert:#at the end of prelearning
             self.train_sync_expert = False
             self.model.freeze_sync_disc()
+            # self.model.freeze_seq_disc()
         ##############################################
       
         self.model.set_input(self.get_sub_seq(for_sync_disc=True))
         loss_sync_dict = self.model.optimize_sync(adversarial)
-        self.model.step_sync_disc()
+        if not adversarial:
+            self.model.step_sync_disc()
 
         self.model.set_input(self.get_sub_seq(for_sync_disc=False))#if not generated again , the computation graph would not be available
-        loss_seq_dict = self.model.optimize_seq(adversarial)
+        loss_seq_dict = self.model.optimize_seq(adversarial=True)
+        self.model.step_seq_disc()
 
         self.clear_input()#clears even the input video
-
         losses = self._merge_losses(losses,loss_sync_dict,loss_seq_dict)
-        # losses = self._merge_losses(losses,loss_sync_dict)
-        # self.clear_input()
-        # if not adversarial:
-        self.model.step_seq_disc()
+     
         self.model.step_gen()
         self.model.update_scale()
-
+        
         return losses
 
     def on_epoch_end(self,state):
@@ -243,9 +238,8 @@ class Wav2MovTrainer(TemplateModel):
 
     def optimize(self,state):
         epoch = state.epoch
-        batch_idx = state.epoch
         losses = self.__optimize(adversarial=((epoch)>=self.hparams['pre_learning_epochs']))
-        
+        # batch_idx = state.epoch
         # if (batch_idx+1)%self.accumulation_steps:
         #     self.model.step()
         return losses

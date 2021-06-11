@@ -28,7 +28,7 @@ class Wav2MovTemplate(TemplateModel):
         self.init_obj_functions()
         self.init_schedulers() 
         self.scaler = amp.GradScaler()
-    
+     
     def set_device(self):
         device = self.hparams['device']
         if device == 'cuda':
@@ -49,6 +49,9 @@ class Wav2MovTemplate(TemplateModel):
     
     def freeze_sync_disc(self):
         self.sync_disc.freeze_learning()
+        
+    def freeze_seq_disc(self):
+        self.seq_disc.freeze_learning()
 
     def set_train_mode(self):
         self.gen.train()
@@ -276,9 +279,9 @@ class Wav2MovTemplate(TemplateModel):
     
     def optimize_sync(self,adversarial):
         losses = {}
-      
-        losses = {**losses,**self.backward_sync(adversarial)}
-        if adversarial:
+        if not adversarial:
+            losses = {**losses,**self.backward_sync(adversarial)}
+        else:
           losses = {**losses,**self.backward_gen_sync()}
         self.clear_input()
         return losses
