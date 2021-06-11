@@ -7,7 +7,7 @@ class ResizeGrayscale:
         _,*img_size = target_shape
         self.transform =  vtransforms.Compose(
                 [
-                    vtransforms.Grayscale(1),
+                    # vtransforms.Grayscale(1),
                     vtransforms.Resize(img_size),
                     # vtransforms.Normalize([0.5]*img_channels, [0.5]*img_channels)
                 ])
