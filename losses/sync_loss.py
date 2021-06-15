@@ -8,7 +8,7 @@ class SyncLoss(nn.Module):
     [Reference]:
     https://github.com/Rudrabha/Wav2Lip/blob/master/hq_wav2lip_train.py#L181-L186 
     """
-    def __init__(self,device,real_label=None,fake_label=1.0):
+    def __init__(self,device,real_label=None,fake_label=0.0):
         super().__init__()
         if real_label is None:
             real_label = round(random.uniform(0.8,1),2)
