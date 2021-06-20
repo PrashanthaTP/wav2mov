@@ -1,4 +1,3 @@
-############################ scale for sync disc removed
 import os
 import torch
 from torch.cuda import amp
@@ -49,9 +48,11 @@ class Wav2MovTemplate(TemplateModel):
     
     def freeze_sync_disc(self):
         self.sync_disc.freeze_learning()
+        self.sync_disc.eval()
         
     def freeze_seq_disc(self):
         self.seq_disc.freeze_learning()
+        self.seq_disc.eval()
 
     def set_train_mode(self):
         self.gen.train()
@@ -126,34 +127,35 @@ class Wav2MovTemplate(TemplateModel):
     def backward_sync(self,adversarial=False):
         # scale =  3 if adversarial else 2
         scale = 1
-        with amp.autocast():
-            disc_out = self.sync_disc(self.audio_seq,
-                                      self.real_video_frames)
-            
-            self.logger.debug(f'[sync] disc out real | in sync | {disc_out[0][0].item():0.4f}')
-            loss_sync = self.criterion_sync(*disc_out,
-                                           is_real_target=True)/scale
-            
-            disc_out = self.sync_disc(self.audio_seq_out_of_sync,
-                                      self.real_video_frames)
+        with amp.autocast(enabled=False):
+          disc_out = self.sync_disc(self.audio_seq,
+                                    self.real_video_frames)
+          
+          self.logger.debug(f'[sync] disc out real | in sync | {disc_out[0].tolist()}')
+          loss_sync = self.criterion_sync(*disc_out,
+                                          is_real_target=True)/scale
+          # self.logger.debug(f'[sync][loss] disc out real | in sync | {loss_sync.item()}')
+          disc_out = self.sync_disc(self.audio_seq_out_of_sync,
+                                    self.real_video_frames)
 
-            self.logger.debug(f'[sync] disc out real | out of sync|  {disc_out[0][0].item():0.4f}')
-    
-            loss_sync += self.criterion_sync(*disc_out,
-                                            is_real_target=False)/scale
-            
-            if adversarial: 
-                # self.logger.debug(f'line 143 {self.audio_seq.shape} {self.fake_video_frames.shape}')
-                disc_out = self.sync_disc(self.audio_seq,
-                                          self.fake_video_frames.detach())
-                self.logger.debug(f'[sync] disc out fake :{disc_out[0][0].item():0.4f}')
+          self.logger.debug(f'[sync] disc out real | out of sync|  {disc_out[0].tolist()}')
 
-                loss_sync += self.criterion_sync(*disc_out,
-                                                is_real_target=False)/scale
-                
-            loss_ret = loss_sync.item()
-            loss_sync /= self.accumulation_steps
-        self.scaler.scale(loss_sync).backward()
+          loss_sync += self.criterion_sync(*disc_out,
+                                          is_real_target=False)/scale
+          
+          if adversarial: 
+              # self.logger.debug(f'line 143 {self.audio_seq.shape} {self.fake_video_frames.shape}')
+              disc_out = self.sync_disc(self.audio_seq,
+                                        self.fake_video_frames.detach())
+              self.logger.debug(f'[sync] disc out fake :{disc_out[0].tolist()}')
+
+              loss_sync += self.criterion_sync(*disc_out,
+                                              is_real_target=False)/scale
+              
+        loss_ret = loss_sync.item()
+        loss_sync /= self.accumulation_steps
+        # self.scaler.scale(loss_sync).backward()
+        loss_sync.backward()
         return {'sync':(loss_ret,self.audio_seq.shape[0])}
 
     def backward_seq(self,adversarial=False):
@@ -196,22 +198,23 @@ class Wav2MovTemplate(TemplateModel):
         return loss_ret
 
     def backward_gen_sync(self):
-        with amp.autocast():
-            ##################################
-            # SYNC discriminator
-            ##################################
-            sync_disc_out = self.sync_disc(self.audio_seq,
-                                        self.fake_video_frames)
+        with amp.autocast(enabled=False):
+          ##################################
+          # SYNC discriminator
+          ##################################
+          sync_disc_out = self.sync_disc(self.audio_seq,
+                                      self.fake_video_frames.float())#fake frames were generated under float16 condition so they are of type HalfTensor
 
-            loss_gen = self.criterion_sync(*sync_disc_out,
-                                          is_real_target=True)*self.hparams['scales']['lambda_sync_disc']
+          loss_gen = self.criterion_sync(*sync_disc_out,
+                                        is_real_target=True)*self.hparams['scales']['lambda_sync_disc']
 
-            loss_ret = loss_gen.item()
-            loss_gen /= self.accumulation_steps
-        # if return_orig_loss:
-        #   return loss_ret,loss_gen
-        self.logger.debug(f'[sync] gen_loss : {loss_gen.item():.04f}  sync_disc_out : {sync_disc_out[0][0].item():0.4f}')
-        self.scaler.scale(loss_gen).backward()
+          loss_ret = loss_gen.item()
+          loss_gen /= self.accumulation_steps
+          # if return_orig_loss:
+          #   return loss_ret,loss_gen
+          self.logger.debug(f'[sync] gen_loss : {loss_gen.item():.04f}  sync_disc_out : {sync_disc_out[0].tolist()}')
+          # self.scaler.scale(loss_gen).backward()
+        loss_gen.backward()
         return {'gen' : (loss_ret,self.audio_seq.shape[0])}
 
     def backward_gen_seq(self):
@@ -228,7 +231,8 @@ class Wav2MovTemplate(TemplateModel):
     
     def step(self):
         self.scaler.step(self.optim_id_disc)
-        self.scaler.step(self.optim_sync_disc)
+        # self.scaler.step(self.optim_sync_disc)
+        self.optim_sync_disc.step()
         self.scaler.step(self.optim_gen)
         self.scaler.step(self.optim_seq_disc)
         
@@ -371,3 +375,4 @@ class Wav2MovTemplate(TemplateModel):
             return torch.load(pt_file % {'model_name': 'gen'})['epoch']
         except Exception as e:
             self.logger.exception(e)
+            

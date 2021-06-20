@@ -246,3 +246,4 @@ class Wav2MovTrainer(TemplateModel):
 
     def on_run_end(self,state):
       self.logger.debug(str(self))
+      
