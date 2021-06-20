@@ -52,6 +52,7 @@ class LoggingCallback(Callbacks):
         self.logger.debug(f'[DATALOADER] batch_size {self.hparams["data"]["batch_size"]}')
         self.logger.debug(f'[DATALOADER] total batches {num_batches}')
         self.logger.debug(f'[RUN] num_epochs : {self.hparams["num_epochs"]} | pre_learning_epochs : {self.hparams["pre_learning_epochs"]}')
+        self.logger.debug(f'[RUN] start epoch')
         
     def on_run_end(self,state):
         self.logger.debug(f'[Run] version {self.config.version}')
