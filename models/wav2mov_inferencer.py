@@ -51,7 +51,7 @@ class Wav2movInferencer(TemplateModel):
             return self._generate_with_fraction(audio_frames,ref_video_frames,fraction)
         
     @no_grad_wrapper
-    def test(self,audio_frames,video,get_ref_video_frame=False):
+    def test(self,audio_frames,video):
         """test the generation of face images
 
         Args:

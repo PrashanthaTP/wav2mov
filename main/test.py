@@ -44,7 +44,7 @@ def test_model(options,hparams,config,logger):
       sample = next(iter(test_dl))
     # print(sample,len(sample))
     audio,audio_frames,video = sample
-    fake_video_frames,ref_video_frame = model.test(audio_frames,video,get_ref_video_frame=True)
+    fake_video_frames,ref_video_frame = model.test(audio_frames,video)
     fake_video_frames = squeeze_frames(fake_video_frames) 
     video = squeeze_frames(video)
     os.makedirs(out_dir,exist_ok=True)
