@@ -1,6 +1,4 @@
 import torch
-
-
 from wav2mov.params import params
 from wav2mov.models import SequenceDiscriminator
 
@@ -13,9 +11,9 @@ def test():
     out = model(frames)
     logger.debug(f'out shape {out.shape}')
     assert(out.shape==(1,256))
+    
 def main():
     test()
-    return
+    
 if __name__=='__main__':
     main()
-

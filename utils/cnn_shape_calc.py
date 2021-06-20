@@ -18,6 +18,6 @@ def out_d_transposed(in_d,k,p,s):
     """ find z and p
         insert z number of zeros between each row and column (2*(i-1)x2*(i-1))
         pad with p number of zeros
-        perform standard convultion
+        perform standard convolution
      """
     return ((in_d-1)*s)+k-(2*p)

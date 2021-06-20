@@ -27,7 +27,9 @@ class SequenceDiscriminator(BaseModel):
         self.cnn = nn.Sequential(*cnn)
         ############################################
         # channels : 3  => 64 => 128 => 256 => 512          
-        # frame sz : 256=> 128 => 64  =>  32 => 16 =>8         
+        # frame sz : 256=> 128 => 64  =>  32 => 16 =>8  : width
+        # height is half so : final height is 4
+        # thus out of self.cnn : 512x4x8       
         ############################################
 
     def forward(self,frames):
