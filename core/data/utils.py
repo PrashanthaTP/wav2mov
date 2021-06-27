@@ -1,23 +1,20 @@
 import numpy as np
-from numpy.core.numeric import full
 import torch
 from torch.functional import Tensor
+
 import os
 import wave
-from moviepy.editor import AudioFileClip
 import cv2 
 import librosa
-import imutils  # for image resizing
 import dlib
 from collections import namedtuple
-
+from moviepy.editor import AudioFileClip
 
 from wav2mov.core.utils.logger import get_module_level_logger
 logger = get_module_level_logger(__name__)
 
 Sample = namedtuple('Sample', ['audio', 'video'])
 SampleWithFrames = namedtuple('SampleWithFrames',['audio','audio_frames','video'])
-
 
 face_detector = dlib.get_frontal_face_detector()
 
@@ -104,6 +101,9 @@ class AudioUtil:
         self.audio_sf = audio_sf
         self.n_mfcc = 13
         
+    def get_mfccs(self,audio):
+        return librosa.feature.mfcc(audio.squeeze().numpy(),sr=self.audio_sf,n_mfcc=self.n_mfcc)[1:].T 
+    
     def __get_center_idx(self,idx):
         return idx+self.coarticulation_factor
 
@@ -156,7 +156,7 @@ class AudioUtil:
         mean,std = np.mean(full_mfccs),np.std(full_mfccs)
         if get_mfccs:
             frames = [self.get_frame_from_idx(audio,idx) for idx in range(start_idx,end_idx)]
-            frames = [librosa.feature.mfcc(frame.squeeze().numpy())[:self.n_mfcc].T for frame in frames]# each of shape [t,13]
+            frames = [get_mfccs(frame) for frame in frames]# each of shape [t,13]
             frames = [((frame-mean)/(std+1e-7)) for frame in frames]
             return torch.from_numpy(np.stack(frames,axis=0))# 1,num_frames,(t,13)
         frames = [self.get_frame_from_idx(audio,idx) for idx in range(start_idx,end_idx)]
@@ -190,15 +190,12 @@ class AudioUtil:
         start_pos = self.__get_center_idx(start_frame)
         end_pos = self.__get_center_idx(end_frame-1)
 
-        full_mfccs = librosa.feature.mfcc(audio.squeeze().numpy(),sr=self.audio_sf)
+        full_mfccs = get_mfccs(audio)
         mean,std = np.mean(full_mfccs),np.std(full_mfccs)
 
         audio = audio[:,self.__get_start_idx(start_pos):self.__get_end_idx(end_pos)]
         if get_mfccs:
-            mfccs = []
-            for a in audio:
-                mfccs.append(librosa.feature.mfcc(a.numpy(),sr=self.audio_sf)[:self.n_mfcc].T)
-                #normalize
+            mfccs = list(map(get_mfccs,audio))
             mfccs = [(mfcc-mean/(std+1e-7)) for mfcc in mfccs]
             return torch.from_numpy(np.stack(mfccs,axis=0)) 
         return audio
