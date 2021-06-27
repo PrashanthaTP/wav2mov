@@ -1,5 +1,4 @@
-
-
+import numpy as np
 import torch
 from torch.functional import Tensor
 import os
@@ -72,8 +71,8 @@ def get_video_frames(video_path,img_size:tuple):
     except Exception as e:
         logger.error(f'error in getting video frames | filename : {video_path} : {e}')
         
-def get_audio(audio_path):
-    audio,_ = librosa.load(audio_path,sr=None)#sr=None to get native sampling rate
+def get_audio(audio_path,sr=None):
+    audio,_ = librosa.load(audio_path,sr=sr)#sr=None to get native sampling rate
     return audio
 
 
@@ -97,10 +96,12 @@ mouth_start_pos, mouth_end_pos = mouth_pos
 
 
 class AudioUtil:
-    def __init__(self,coarticulation_factor,stride,device='cpu'):
+    def __init__(self,audio_sf,coarticulation_factor,stride,device='cpu'):
         self.coarticulation_factor = coarticulation_factor
         self.stride = stride
         self.device = device
+        self.audio_sf = audio_sf
+        self.n_mfcc = 13
         
     def __get_center_idx(self,idx):
         return idx+self.coarticulation_factor
@@ -123,7 +124,7 @@ class AudioUtil:
         end_pos = self.__get_end_idx(center_idx)
         return audio[:, start_pos:end_pos]
 
-    def get_audio_frames(self,audio,num_frames=None):
+    def get_audio_frames(self,audio,num_frames=None,get_mfccs=False):
         """extracts from the audio      
 
         Args:
@@ -151,11 +152,15 @@ class AudioUtil:
         padding = torch.zeros((1,self.coarticulation_factor*self.stride),device=self.device) 
         audio = torch.cat([padding,audio,padding],dim=1)
 
+        if get_mfccs:
+            frames = [self.get_frame_from_idx(audio,idx) for idx in range(start_idx,end_idx)]
+            frames = [librosa.feature.mfcc(frame.squeeze().numpy())[:self.n_mfcc].T for frame in frames]# each of shape [t,13]
+            return torch.from_numpy(np.stack(frames,axis=0))# 1,num_frames,(t,13)
         frames = [self.get_frame_from_idx(audio,idx) for idx in range(start_idx,end_idx)]
         #each frame is of shape (1,frame_size) so can be catenated along zeroth dimension .
         return torch.cat(frames,dim=0)
                     
-    def get_limited_audio(self,audio,num_frames,start_frame=None,get_mfcc=True) :
+    def get_limited_audio(self,audio,num_frames,start_frame=None,get_mfccs=False) :
         possible_num_frames = audio.shape[-1]//self.stride
         if num_frames>possible_num_frames:
             logger.error(f'Given num_frames {num_frames} is larger the possible_num_frames {possible_num_frames}')
@@ -182,4 +187,11 @@ class AudioUtil:
         start_pos = self.__get_center_idx(start_frame)
         end_pos = self.__get_center_idx(end_frame-1)
         audio = audio[:,self.__get_start_idx(start_pos):self.__get_end_idx(end_pos)]
+        if get_mfccs:
+            mfccs = []
+            for a in audio:
+                mfccs.append(librosa.feature.mfcc(a.numpy(),sr=self.audio_sf)[:self.n_mfcc].T)
+                #normalize
+            mfccs = [(mfcc-np.mean(mfcc)/(np.std(mfcc)+1e-7)) for mfcc in mfccs]
+            return torch.from_numpy(np.stack(mfccs,axis=0)) 
         return audio

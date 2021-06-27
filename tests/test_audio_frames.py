@@ -1,6 +1,7 @@
 import numpy
 import os
 import torch
+from matplotlib import pyplot as plt
 from scipy.io.wavfile import write
 
 from wav2mov.config import get_config
@@ -8,7 +9,7 @@ from wav2mov.params import params as hparams
 
 from wav2mov.main.options import Options
 from wav2mov.core.data.collates import get_batch_collate
-from wav2mov.main.data import get_dataloaders_v2 as get_dl
+from wav2mov.main.data import get_dataloaders as get_dl
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 def test():
@@ -20,17 +21,17 @@ def test():
     sample = next(iter(train_dl))
     audio,audio_frames,video = sample
     
-    audio_dir = os.path.join(DIR,'res')
-    os.makedirs(audio_dir,exist_ok=True)
-    a = audio[0].numpy()
-    print('audio ',audio.shape,a.shape)
-    write(os.path.join(audio_dir,'test_audio.wav'),16000,a)
+    print(f'audio : {audio.shape}')
+    print(f'audio frames : {audio_frames.shape}')
+    print(f'video : {video.shape}')
+    for audio_frame in audio_frames[0][:10]:
+        print(f'max mfccs {torch.max(audio_frame)}')
+        print(f'min mfccs {torch.min(audio_frame)}')
+        print(f'mean mfccs {torch.mean(audio_frame)}')
+        print(f'std mfccs {torch.std(audio_frame)}')
+    plt.imshow(audio_frames[0][0])
+    plt.show()
     
-    f = audio_frames[0][15].numpy()
-    print('frame ',audio_frames.shape,f.shape)
-    write(os.path.join(audio_dir,'test_audio_frame.wav'),16000,f)
-    
-    print('saved audio ',audio_dir)
 if __name__ == '__main__':
     test()
     
