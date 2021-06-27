@@ -1,13 +1,13 @@
 import numpy as np
 import torch
 from torch.functional import Tensor
-
 import os
 import wave
 import cv2 
 import librosa
 import dlib
 from collections import namedtuple
+from functools import partial
 from moviepy.editor import AudioFileClip
 
 from wav2mov.core.utils.logger import get_module_level_logger
@@ -92,18 +92,28 @@ mouth_pos = face_utils.FACIAL_LANDMARKS_IDXS['mouth']
 mouth_start_pos, mouth_end_pos = mouth_pos
 """
 
-
 class AudioUtil:
     def __init__(self,audio_sf,coarticulation_factor,stride,device='cpu'):
         self.coarticulation_factor = coarticulation_factor
         self.stride = stride
         self.device = device
         self.audio_sf = audio_sf
-        self.n_mfcc = 13
+        self.n_mfcc = 14
+        # self.mfcc_transform =  MFCC(sample_rate=self.audio_sf,n_mfcc=self.n_mfcc)
+        self.mfcc_transform =  partial(librosa.feature.mfcc,sr=self.audio_sf,n_mfcc=self.n_mfcc)
         
-    def get_mfccs(self,audio):
-        return librosa.feature.mfcc(audio.squeeze().numpy(),sr=self.audio_sf,n_mfcc=self.n_mfcc)[1:].T 
-    
+    def extract_mfccs(self,audio):
+        mfccs = self.mfcc_transform(audio.squeeze().cpu().numpy())[1:].T 
+        if isinstance(mfccs,torch.functional.Tensor):
+          return mfccs
+        return torch.from_numpy(mfccs).to(audio.device)
+
+    def get_mfccs_mean_std(self,audio):
+        full_mfccs = list(map(self.extract_mfccs,audio))
+        full_mfccs = torch.stack(full_mfccs,axis=0)
+        mean,std = torch.mean(full_mfccs,axis=(1,2),keepdims=True),torch.std(full_mfccs,axis=(1,2),keepdims=True)
+        return mean,std
+
     def __get_center_idx(self,idx):
         return idx+self.coarticulation_factor
 
@@ -142,23 +152,23 @@ class AudioUtil:
             audio = torch.tensor(audio,device=self.device)
         # if len(audio.shape)<2:
         #     audio = audio.unsqueeze(0)
-            
         possible_num_frames = audio.shape[-1]//self.stride
         num_frames = possible_num_frames if num_frames is None else num_frames
         
+        mean,std = self.get_mfccs_mean_std(audio)
+      
         if num_frames > possible_num_frames:
             raise ValueError(f'given audio has {possible_num_frames} frames but {num_frames} frames requested.')
         start_idx = (possible_num_frames-num_frames)//2
         end_idx = (possible_num_frames+num_frames)//2 #start_idx + (num_frames) 
         padding = torch.zeros((1,self.coarticulation_factor*self.stride),device=self.device) 
         audio = torch.cat([padding,audio,padding],dim=1)
-        full_mfccs = librosa.feature.mfcc(audio.squeeze().numpy(),sr=self.audio_sf)
-        mean,std = np.mean(full_mfccs),np.std(full_mfccs)
         if get_mfccs:
             frames = [self.get_frame_from_idx(audio,idx) for idx in range(start_idx,end_idx)]
-            frames = [get_mfccs(frame) for frame in frames]# each of shape [t,13]
-            frames = [((frame-mean)/(std+1e-7)) for frame in frames]
-            return torch.from_numpy(np.stack(frames,axis=0))# 1,num_frames,(t,13)
+            frames = [self.extract_mfccs(frame) for frame in frames]# each of shape [t,13]
+            # frames = [((frame-mean[i])/(std[i]+1e-7)) for i,frame in enumerate(frames)]
+            frames = torch.stack(frames,axis=0)# 1,num_frames,(t,13)
+            return (frames-mean)/(std+1e-7)
         frames = [self.get_frame_from_idx(audio,idx) for idx in range(start_idx,end_idx)]
         #each frame is of shape (1,frame_size) so can be catenated along zeroth dimension .
         return torch.cat(frames,dim=0)
@@ -168,6 +178,7 @@ class AudioUtil:
         if num_frames>possible_num_frames:
             logger.error(f'Given num_frames {num_frames} is larger the possible_num_frames {possible_num_frames}')
 
+        mean,std = self.get_mfccs_mean_std(audio)
         padding = torch.zeros((audio.shape[0],self.coarticulation_factor*self.stride),device=self.device) 
         audio = torch.cat([padding,audio,padding],dim=1)
             
@@ -190,12 +201,11 @@ class AudioUtil:
         start_pos = self.__get_center_idx(start_frame)
         end_pos = self.__get_center_idx(end_frame-1)
 
-        full_mfccs = get_mfccs(audio)
-        mean,std = np.mean(full_mfccs),np.std(full_mfccs)
 
         audio = audio[:,self.__get_start_idx(start_pos):self.__get_end_idx(end_pos)]
         if get_mfccs:
-            mfccs = list(map(get_mfccs,audio))
-            mfccs = [(mfcc-mean/(std+1e-7)) for mfcc in mfccs]
-            return torch.from_numpy(np.stack(mfccs,axis=0)) 
+            mfccs = list(map(self.extract_mfccs,audio))
+            # mfccs = [(mfcc-mean[i]/(std[i]+1e-7)) for i,mfcc in enumerate(mfccs)]
+            mfccs = torch.stack(mfccs,axis=0)
+            return (mfccs-mean)/(std+1e-7)
         return audio
