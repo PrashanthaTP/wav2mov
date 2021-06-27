@@ -37,7 +37,9 @@ class Wav2MovTrainer(TemplateModel):
         self.to(self.device)
         self.accumulation_steps = self.hparams['data']['batch_size']//self.hparams['data']['mini_batch_size']
         self.zero_grad(set_to_none=True)
-        self.audio_util = AudioUtil(self.hparams['data']['coarticulation_factor'],self.__get_stride(),device=self.hparams['device']) 
+        audio_sf = self.hparams['data']['audio_sf']
+        coarticulation_factor = self.hparams['data']['coarticulation_factor']
+        self.audio_util = AudioUtil(audio_sf,coarticulation_factor,self.__get_stride(),device=self.hparams['device']) 
 
     def save(self,*args,**kwargs):
         self.model.save(*args,**kwargs)
@@ -154,8 +156,8 @@ class Wav2MovTrainer(TemplateModel):
         if not for_sync_disc:
           return ret
 
-        ret['audio_seq'] = self.audio_util.get_limited_audio(self.audio,NUM_FRAMES_FOR_SYNC,start_frame=randpos)
-        ret['audio_seq_out_of_sync'] = self.audio_util.get_limited_audio(self.audio,NUM_FRAMES_FOR_SYNC,start_frame=randpos+OFFSET_SYNC_OUT_OF_SYNC)
+        ret['audio_seq'] = self.audio_util.get_limited_audio(self.audio,NUM_FRAMES_FOR_SYNC,start_frame=randpos,get_mfccs=True)
+        ret['audio_seq_out_of_sync'] = self.audio_util.get_limited_audio(self.audio,NUM_FRAMES_FOR_SYNC,start_frame=randpos+OFFSET_SYNC_OUT_OF_SYNC,get_mfccs=True)
         
         return ret
            
