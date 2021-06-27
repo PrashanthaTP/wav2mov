@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.core.numeric import full
 import torch
 from torch.functional import Tensor
 import os
@@ -151,10 +152,12 @@ class AudioUtil:
         end_idx = (possible_num_frames+num_frames)//2 #start_idx + (num_frames) 
         padding = torch.zeros((1,self.coarticulation_factor*self.stride),device=self.device) 
         audio = torch.cat([padding,audio,padding],dim=1)
-
+        full_mfccs = librosa.feature.mfcc(audio.squeeze().numpy(),sr=self.audio_sf)
+        mean,std = np.mean(full_mfccs),np.std(full_mfccs)
         if get_mfccs:
             frames = [self.get_frame_from_idx(audio,idx) for idx in range(start_idx,end_idx)]
             frames = [librosa.feature.mfcc(frame.squeeze().numpy())[:self.n_mfcc].T for frame in frames]# each of shape [t,13]
+            frames = [((frame-mean)/(std+1e-7)) for frame in frames]
             return torch.from_numpy(np.stack(frames,axis=0))# 1,num_frames,(t,13)
         frames = [self.get_frame_from_idx(audio,idx) for idx in range(start_idx,end_idx)]
         #each frame is of shape (1,frame_size) so can be catenated along zeroth dimension .
@@ -186,12 +189,16 @@ class AudioUtil:
         
         start_pos = self.__get_center_idx(start_frame)
         end_pos = self.__get_center_idx(end_frame-1)
+
+        full_mfccs = librosa.feature.mfcc(audio.squeeze().numpy(),sr=self.audio_sf)
+        mean,std = np.mean(full_mfccs),np.std(full_mfccs)
+
         audio = audio[:,self.__get_start_idx(start_pos):self.__get_end_idx(end_pos)]
         if get_mfccs:
             mfccs = []
             for a in audio:
                 mfccs.append(librosa.feature.mfcc(a.numpy(),sr=self.audio_sf)[:self.n_mfcc].T)
                 #normalize
-            mfccs = [(mfcc-np.mean(mfcc)/(np.std(mfcc)+1e-7)) for mfcc in mfccs]
+            mfccs = [(mfcc-mean/(std+1e-7)) for mfcc in mfccs]
             return torch.from_numpy(np.stack(mfccs,axis=0)) 
         return audio

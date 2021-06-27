@@ -24,12 +24,17 @@ def test():
     print(f'audio : {audio.shape}')
     print(f'audio frames : {audio_frames.shape}')
     print(f'video : {video.shape}')
+    means,stds,maxs,mins = [],[],[],[]
     for audio_frame in audio_frames[0][:10]:
-        print(f'max mfccs {torch.max(audio_frame)}')
-        print(f'min mfccs {torch.min(audio_frame)}')
-        print(f'mean mfccs {torch.mean(audio_frame)}')
-        print(f'std mfccs {torch.std(audio_frame)}')
-    plt.imshow(audio_frames[0][0])
+        maxs.append(torch.max(audio_frame).item())
+        mins.append(torch.min(audio_frame).item())
+        means.append(torch.mean(audio_frame).item())
+        stds.append(torch.std(audio_frame).item())
+    print('means ',means)
+    print('stds ',stds)
+    print('maxs ',maxs)
+    print('mins ',mins)
+    plt.imshow(audio_frames[0][30])
     plt.show()
     
 if __name__ == '__main__':
