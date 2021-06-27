@@ -8,9 +8,9 @@ logger = get_module_level_logger(__file__)
 config = get_config('test_sync')
 def test():
     model = SyncDiscriminator(params['disc']['sync_disc'],config)
-    audio = torch.randn(2,666*9)
-    frames = torch.randn(2,5,3,256,256)
-    out = model(audio,frames)[0]
+    audio_frames = torch.randn(2,12,13)
+    video_frames = torch.randn(2,5,3,256,256)
+    out = model(audio_frames,video_frames)[0]
     logger.debug(f'out shape {out.shape}')
     assert(out.shape==(2,1))
     
