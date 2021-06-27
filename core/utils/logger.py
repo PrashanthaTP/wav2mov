@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level=logging.ERROR,format="%(levelname)s : %(name)s : %(asctime)s | %(msg)s ")     
+logging.basicConfig(level=logging.DEBUG,format="%(levelname)s : %(name)s : %(asctime)s | %(msg)s ")     
 
  
 def get_module_level_logger(name):
