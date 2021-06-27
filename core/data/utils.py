@@ -6,7 +6,7 @@ import os
 import wave
 from moviepy.editor import AudioFileClip
 import cv2 
-import librosa 
+import librosa
 import imutils  # for image resizing
 import dlib
 from collections import namedtuple
@@ -101,10 +101,13 @@ class AudioUtil:
         self.coarticulation_factor = coarticulation_factor
         self.stride = stride
         self.device = device
+        
     def __get_center_idx(self,idx):
         return idx+self.coarticulation_factor
+
     def __get_start_idx(self,idx):
         return (idx-self.coarticulation_factor)*self.stride
+
     def __get_end_idx(self,idx):
         return (idx+self.coarticulation_factor+1)*self.stride
     
@@ -170,7 +173,7 @@ class AudioUtil:
         if start_frame is None:
             start_frame = actual_start_frame
             
-        if start_frame+num_frames>possible_num_frames:#[why > not >=]think if possible num_frames is 50 and 50 is the requied num_frames and start_frame is zero
+        if start_frame+num_frames>possible_num_frames:#[why > not >=]think if possible num_frames is 50 and 50 is the required num_frames and start_frame is zero
             logger.warning(f'Given Audio has {possible_num_frames} frames. Given starting frame {start_frame} cannot be consider for getting {num_frames} frames. Changing startframes to {actual_start_frame} frame.')
             start_frame = actual_start_frame
             

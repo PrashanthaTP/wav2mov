@@ -2,7 +2,7 @@
 TITLE wav2mov
 echo Running training script
 
-set EPOCHS=25
+set EPOCHS=1
 set NUM_VIDEOS=14
 set VERSION="v9"
 set "COMMENT='GPU | scaled id ,gen_id losses by FRACTION | prelearning till 15 epoch | 10 l1_l and 1 id_l'"
