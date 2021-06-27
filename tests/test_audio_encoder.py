@@ -8,7 +8,7 @@ logger = get_module_level_logger(__file__)
 config = get_config('test_sync')
 def test():
     model = AudioEnocoder(params['gen'])
-    audio = torch.randn(2,10,666*5)
+    audio = torch.randn(2,10,7,13)
     out = model(audio)
     logger.debug(f'out shape {out.shape}')
     assert(out.shape==(2,10,params['gen']['latent_dim_audio']))
