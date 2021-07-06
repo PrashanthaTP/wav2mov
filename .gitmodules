@@ -1,0 +1,3 @@
+[submodule "wav2mov-docs"]
+	path = wav2mov-docs
+	url = https://github.com/PrashanthaTP/wav2mov-docs.git
