@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import pytz
 from datetime import datetime
 from wav2mov.logger import get_module_level_logger
 
@@ -11,7 +12,7 @@ logger = get_module_level_logger(__name__)
 logger.setLevel(logging.WARNING)
 
 def get_curr_run_str():
-    now = datetime.now()
+    now = datetime.now().astimezone(pytz.timezone("Asia/Calcutta"))
     date,time = now.date(),now.time()
     day,month,year = date.day,date.month,date.year
     hour , minutes = time.hour,time.minute
