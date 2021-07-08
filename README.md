@@ -1,6 +1,4 @@
-# WAV2MOV
-
-***
+# [![website](https://img.shields.io/static/v1?label=&message=wav2mov&color=blue&style=for-the-badge)](https://wav2mov.vercel.app)
 
 ## Speech To Facial Animation Using GANs
 
