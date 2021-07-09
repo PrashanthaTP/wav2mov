@@ -3,7 +3,7 @@ import torch
 from torch.functional import Tensor
 import os
 import wave
-import cv2 
+import cv2
 import librosa
 import dlib
 from collections import namedtuple
@@ -65,10 +65,10 @@ def get_video_frames(video_path,img_size:tuple):
                   raise(e)
             finally:
                 frames.append(image)
-        return frames 
+        return frames
     except Exception as e:
         logger.error(f'error in getting video frames | filename : {video_path} : {e}')
-        
+
 def get_audio(audio_path,sr=None):
     audio,_ = librosa.load(audio_path,sr=sr)#sr=None to get native sampling rate
     return audio
@@ -83,15 +83,6 @@ def get_audio_from_video(video_file):
     AudioFileClip(video_file).write_audiofile('temp.wav', verbose=False, logger=None)
     return 'temp.wav'
 
-"""
-shape_predictor_path = os.path.join(os.path.dirname(__file__), 'shape_predictor_68_face_landmarks.dat')
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(shape_predictor_path)
-
-mouth_pos = face_utils.FACIAL_LANDMARKS_IDXS['mouth']
-mouth_start_pos, mouth_end_pos = mouth_pos
-"""
-
 class AudioUtil:
     def __init__(self,audio_sf,coarticulation_factor,stride,device='cpu'):
         self.coarticulation_factor = coarticulation_factor
@@ -99,11 +90,41 @@ class AudioUtil:
         self.device = device
         self.audio_sf = audio_sf
         self.n_mfcc = 14
-        # self.mfcc_transform =  MFCC(sample_rate=self.audio_sf,n_mfcc=self.n_mfcc)
-        self.mfcc_transform =  partial(librosa.feature.mfcc,sr=self.audio_sf,n_mfcc=self.n_mfcc)
-        
+        self.n_fft = 2048
+        self.win_length = self.n_fft
+        n_fft = 2048
+        win_length = None
+        hop_length = 512
+        n_mels = 128
+        n_mfcc = 14
+        sample_rate=16000
+
+        self.mfcc_transform =nn.Sequential(
+                                      MFCC(sample_rate=sample_rate,
+                                      n_mfcc=n_mfcc,
+                                      melkwargs={
+                                        'n_fft': n_fft,
+                                        'n_mels': n_mels,
+                                        'hop_length': hop_length,
+                                        'mel_scale': 'htk',
+                                      }))
+
+        self.mfcc_transform.to(self.device)
+        # self.mfcc_transform =  MFCC(sample_rate=self.audio_sf,n_mfcc=self.n_mfcc,
+        #                             dct_type=2, norm='ortho',
+        #                             melkwargs={"n_fft": self.n_fft,
+        #                                       "hop_length": 512,
+        #                                       "power": 2,
+        #                                       # "win_length":self.win_length,
+        #                                       "window_fn":torch.hann_window,
+        #                                       "wkwargs":{"device":"cuda"}
+        #                                       })
+        # self.mfcc_transform =  partial(librosa.feature.mfcc,sr=self.audio_sf,n_mfcc=self.n_mfcc)
+
+    #is first mfccs coefficient corresponds to energy ?
     def extract_mfccs(self,audio):
-        mfccs = self.mfcc_transform(audio.squeeze().cpu().numpy())[1:].T 
+        with torch.no_grad():
+            mfccs = self.mfcc_transform(audio.squeeze())[1:].T
         if isinstance(mfccs,torch.functional.Tensor):
           return mfccs
         return torch.from_numpy(mfccs).to(audio.device)
@@ -119,24 +140,24 @@ class AudioUtil:
 
     def __get_start_idx(self,idx):
         return (idx-self.coarticulation_factor)*self.stride
-        
+
     def __get_end_idx(self,idx):
         return (idx+self.coarticulation_factor+1)*self.stride
-    
+
     def get_frame_from_idx(self,audio,idx):
         if not isinstance(audio,Tensor):
             audio = torch.tensor(audio)
-            
+
         if len(audio.shape)<2:
             audio = audio.unsqueeze(0)
-            
+
         center_idx = self.__get_center_idx(idx)
         start_pos = self.__get_start_idx(center_idx)
         end_pos = self.__get_end_idx(center_idx)
         return audio[:, start_pos:end_pos]
 
     def get_audio_frames(self,audio,num_frames=None,get_mfccs=False):
-        """extracts from the audio      
+        """extracts from the audio
 
         Args:
             audio ([numpy array or Tensor]): audio to be seperated into frames (1,audio_points)
@@ -144,7 +165,7 @@ class AudioUtil:
 
         Returns:
             [Tensor]:stacked  audio frames of shape (1,num_frames)
-        
+
         Raises:
             ValueError : if frange is not valid.
         """
@@ -154,14 +175,14 @@ class AudioUtil:
         #     audio = audio.unsqueeze(0)
         possible_num_frames = audio.shape[-1]//self.stride
         num_frames = possible_num_frames if num_frames is None else num_frames
-        
+
         mean,std = self.get_mfccs_mean_std(audio)
-      
+
         if num_frames > possible_num_frames:
             raise ValueError(f'given audio has {possible_num_frames} frames but {num_frames} frames requested.')
         start_idx = (possible_num_frames-num_frames)//2
-        end_idx = (possible_num_frames+num_frames)//2 #start_idx + (num_frames) 
-        padding = torch.zeros((1,self.coarticulation_factor*self.stride),device=self.device) 
+        end_idx = (possible_num_frames+num_frames)//2 #start_idx + (num_frames)
+        padding = torch.zeros((1,self.coarticulation_factor*self.stride),device=self.device)
         audio = torch.cat([padding,audio,padding],dim=1)
         if get_mfccs:
             frames = [self.get_frame_from_idx(audio,idx) for idx in range(start_idx,end_idx)]
@@ -172,16 +193,16 @@ class AudioUtil:
         frames = [self.get_frame_from_idx(audio,idx) for idx in range(start_idx,end_idx)]
         #each frame is of shape (1,frame_size) so can be catenated along zeroth dimension .
         return torch.cat(frames,dim=0)
-                    
+
     def get_limited_audio(self,audio,num_frames,start_frame=None,get_mfccs=False) :
         possible_num_frames = audio.shape[-1]//self.stride
         if num_frames>possible_num_frames:
             logger.error(f'Given num_frames {num_frames} is larger the possible_num_frames {possible_num_frames}')
 
         mean,std = self.get_mfccs_mean_std(audio)
-        padding = torch.zeros((audio.shape[0],self.coarticulation_factor*self.stride),device=self.device) 
+        padding = torch.zeros((audio.shape[0],self.coarticulation_factor*self.stride),device=self.device)
         audio = torch.cat([padding,audio,padding],dim=1)
-            
+
         # possible_num_frames = audio.shape[-1]//self.stride
         actual_start_frame = (possible_num_frames-num_frames)//2
         # [......................................................]
@@ -191,13 +212,13 @@ class AudioUtil:
         #   actual start frame
         if start_frame is None:
             start_frame = actual_start_frame
-            
+
         if start_frame+num_frames>possible_num_frames:#[why > not >=]think if possible num_frames is 50 and 50 is the required num_frames and start_frame is zero
             logger.warning(f'Given Audio has {possible_num_frames} frames. Given starting frame {start_frame} cannot be consider for getting {num_frames} frames. Changing startframes to {actual_start_frame} frame.')
             start_frame = actual_start_frame
-            
+
         end_frame = start_frame + (num_frames) #exclusive
-        
+
         start_pos = self.__get_center_idx(start_frame)
         end_pos = self.__get_center_idx(end_frame-1)
 
