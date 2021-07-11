@@ -39,6 +39,11 @@ class Options():
                                 choices=['y','n','yes','no'],
                                 type=str,
                                 help='run test script')
+        self.parser.add_argument('--train_sync_expert',
+                                 default='n',
+                                choices=['y','n','yes','no'],
+                                type=str,
+                                help='only train sync disc')
                 
         self.parser.add_argument('--preprocess',
                                  default='n',
@@ -65,6 +70,11 @@ class Options():
         self.parser.add_argument('--msg','-m',
                                  type=str,
                                  help='any message about current run')
+              
+        self.parser.add_argument('--test_sample_num','-snum',
+                                type=int,
+                                help='sample to be taken from test dataloader',
+                         )
         
     def parse(self):
         return self.parser.parse_args()
@@ -77,7 +87,12 @@ def set_device(options, params):
 def set_epochs(options,params):
     num_epochs = options.num_epochs
     params.set('num_epochs',num_epochs)
+
+def set_train_sync_expert(options,params):
+    train_sync_expert = True if options.train_sync_expert in ('y','yes') else False
+    params.set('train_sync_expert',train_sync_expert)
     
 def set_options(options, params):
     set_device(options,params)
     set_epochs(options,params)
+    set_train_sync_expert(options,params)
