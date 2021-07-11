@@ -1,20 +1,20 @@
 {
 	"seed": 10,
-	"ref_frame_idx": -10,
+	"ref_frame_idx":-10,
 	"device": "cpu",
 	"img_size": 256,
 	"num_epochs": 4,
-	"pre_learning_epochs": 50,
+	"pre_learning_epochs":100,
 	"img_channels": 3,
-	"num_frames_fraction": 15,
+	"num_frames_fraction":15,
 	"data": {
-		"img_size": 256,
-		"img_channels": 3,
+		"img_size":256,
+		"img_channels":3,
 		"coarticulation_factor": 2,
 		"audio_sf": 16000,
 		"video_fps": 24,
-		"batch_size": 2,
-		"mini_batch_size": 2,
+		"batch_size": 6,
+		"mini_batch_size": 6,
 		"mean": 0.516,
 		"std": 0.236
 	},
@@ -22,20 +22,24 @@
 		"sync_disc": {
 			"in_channels": 3,
 			"lr": 1e-4,
-			"relu_neg_slope": 0.01
+			"relu_neg_slope":0.01
 		},
-		"sequence_disc": {
+		"sequence_disc":{
 			"in_channels": 3,
-			"chs": [64, 128, 256, 512, 1],
+			"chs":[64,128,256,512,1],
 			"in_size": 32,
 			"h_size": 256,
 			"num_layers": 1,
-			"lr": 1e-5
+			"lr": 1e-4,
+			"relu_neg_slope":0.01
+
 		},
+	
 		"identity_disc": {
 			"in_channels": 3,
-			"chs": [64, 128, 256, 512, 1024, 1],
-			"lr": 1e-4
+			"chs": [64, 128, 256,512,1024,1],
+			"lr": 1e-4,
+      "relu_neg_slope":0.01
 		},
 		"patch_disc": {
 			"ndf": 64,
@@ -44,32 +48,34 @@
 			"lr": 1e-4
 		}
 	},
+	
+
 	"gen": {
-		"in_channels": 3,
-		"chs": [64, 128, 256, 512, 1024],
-		"latent_dim": 282,
-		"latent_dim_id": [8, 8],
-		"latent_dim_audio": 256,
-		"latent_dim_noise": 10,
-		"device": "cpu",
-		"lr": 2e-4
-	},
+			"in_channels":3,
+			"chs":[64,128,256,512,1024],
+			"latent_dim":282,
+			"latent_dim_id":[8,8],
+			"latent_dim_audio":256,
+			"latent_dim_noise":10,
+			"device":"cpu",
+			"lr":2e-4
+		},
 
 	"scales": {
-		"lambda_seq_disc": 0.5,
-		"lambda_sync_disc": 1,
+		"lambda_seq_disc": 0.3,
+		"lambda_sync_disc": 0.8,
 		"lambda_id_disc": 1,
 		"lambda_L1": 50
 	},
-	"scheduler": {
-		"gen": {
-			"step_size": 20,
-			"gamma": 0.02
-		},
-		"discs": {
-			"step_size": 20,
-			"gamma": 0.1
-		},
-		"max_epoch": 100
-	}
+	 "scheduler":{
+      "gen":{
+        "step_size":20,
+        "gamma":0.02
+      },
+      "discs":{
+        "step_size":20,
+        "gamma":0.1
+      },
+	  "max_epoch":100
+  }
 }
