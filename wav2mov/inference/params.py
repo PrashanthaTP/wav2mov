@@ -1,0 +1,13 @@
+EPSILON  = 1e-7
+DEVICE = 'cpu'
+COARTICULATION_FACTOR = 2
+AUDIO_SF = 16000
+VIDEO_FPS = 24
+STRIDE = AUDIO_SF//VIDEO_FPS
+IMAGE_CHANNELS = 3
+IMAGE_SIZE = (256,256)
+VIDEO_MEAN = [0.5,0.5,0.5]
+VIDEO_STD = [0.5,0.5,0.5]
+AUDIO_MEAN = 5.6196e-07
+AUDIO_STD = 0.0142
+GEN_CHECKPOINT_PATH = r'E:\Users\VS_Code_Workspace\Python\VirtualEnvironments\wav2mov\wav2mov\wav2mov\inference\models\checkpoints\gen_Run_11_7_2021__19_18.pt'
