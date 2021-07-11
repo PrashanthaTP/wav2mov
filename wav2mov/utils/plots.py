@@ -11,7 +11,7 @@ from moviepy import editor as mpy
 from scipy.io.wavfile import write as write_audio
 
 import warnings
-warnings.filterwarnings( "ignore", module = "matplotlib\..*" )
+warnings.filterwarnings( "ignore", module = r"matplotlib\..*" )
 
 from wav2mov.logger import get_module_level_logger
 logger = get_module_level_logger(__name__)
