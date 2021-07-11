@@ -8,7 +8,6 @@ wav2mov/plans/*.txt
 *.png
 !wav2mov/plans/images/*.png
 *.gif
-*Run_*
 *.pt
 archieves/
 # Vs code
