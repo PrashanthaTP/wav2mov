@@ -10,6 +10,17 @@ from wav2mov.utils.misc import AverageMetersList,ProgressMeter
 from wav2mov.logger import get_module_level_logger
 m_logger = get_module_level_logger(__name__)
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 class TensorBoardCallback(Callbacks):
 
     def __init__(self,options,config):
@@ -52,8 +63,9 @@ class LoggingCallback(Callbacks):
         self.logger.debug(f'[DATALOADER] batch_size {self.hparams["data"]["batch_size"]}')
         self.logger.debug(f'[DATALOADER] total batches {num_batches}')
         self.logger.debug(f'[RUN] num_epochs : {self.hparams["num_epochs"]} | pre_learning_epochs : {self.hparams["pre_learning_epochs"]}')
-        self.logger.debug(f'[RUN] start epoch')
-        
+        self.logger.debug(f'[RUN] adversarial_with_id : {self.hparams["adversarial_with_id"]} |adversarial_with_sync: {self.hparams["adversarial_with_sync"]}| adversarial_with_seq : {self.hparams["stop_adversarial_with_sync"]}')
+        self.logger.debug(f'[RUN] starting epoch : {state.start_epoch}')
+
     def on_run_end(self,state):
         self.logger.debug(f'[Run] version {self.config.version}')
 
@@ -107,6 +119,7 @@ class LossMetersCallback(Callbacks):
             self.epoch_loss_meter.update(self.update_with_multiplier(batch_avg_loss,batch_size))
             if self.verbose:
                 self.logger.info(self.batch_progress_meter.get_display_str((batch_idx+1)//self.accumulation_steps))
+                self.logger.debug(f"{bcolors.BOLD}{bcolors.OKCYAN}batch_idx={batch_idx+1} | num_batches={state.num_batches} | epoch={state.epoch}|num_epochs={self.hparams['num_epochs']} {bcolors.ENDC}")
             self.batch_loss_meter.reset()
 
     def on_epoch_end(self,state):
