@@ -10,8 +10,6 @@ from wav2mov.logger import get_module_level_logger
 logger = get_module_level_logger(__name__)
 
 class IdentityDiscriminator(BaseModel):
-  
-
     def __init__(self,hparams):
     
         super().__init__()
@@ -20,13 +18,14 @@ class IdentityDiscriminator(BaseModel):
         chs = self.hparams['chs']
         chs = [in_channels] + chs 
         padding = get_same_padding(kernel_size=4,stride=2)
+        relu_neg_slope = self.hparams['relu_neg_slope']
         self.conv_blocks = nn.ModuleList(Conv2dBlock(chs[i],chs[i+1],
                                                      kernel_size=(4,4),
                                                      stride=2,
                                                      padding=padding,
                                                      use_norm=True,
                                                      use_act=True,
-                                                     act=nn.LeakyReLU(0.2)
+                                                     act=nn.LeakyReLU(relu_neg_slope)
                                                      ) for i in range(len(chs)-2)
                                          )
 
@@ -50,7 +49,6 @@ class IdentityDiscriminator(BaseModel):
             x = squeeze_batch_frames(x)
             y = squeeze_batch_frames(y)
         
-            
         x = torch.cat([x,y],dim=1)#along channels
         for block in self.conv_blocks:
           x = block(x)

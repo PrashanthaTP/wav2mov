@@ -12,6 +12,7 @@ class SequenceDiscriminator(BaseModel):
     def __init__(self,hparams):
         super().__init__()
         self.hparams = hparams 
+        relu_neg_slope = self.hparams['relu_neg_slope']
         in_size, h_size, num_layers = self.hparams['in_size'],self.hparams['h_size'],self.hparams['num_layers']
         self.gru = nn.GRU(input_size=in_size,hidden_size=h_size,num_layers=num_layers,batch_first = True)
         in_channels = self.hparams['in_channels']
@@ -20,14 +21,14 @@ class SequenceDiscriminator(BaseModel):
         padding = get_same_padding(kernel,stride)
         cnn = nn.ModuleList([Conv2dBlock(chs[i],chs[i+1],kernel,stride,padding,
                                          use_norm=True,use_act=True,
-                                         act=nn.LeakyReLU(0.01)) for i in range(len(chs)-2)])
+                                         act=nn.LeakyReLU(relu_neg_slope)) for i in range(len(chs)-2)])
         cnn.append(Conv2dBlock(chs[-2],chs[-1],kernel,stride,padding,
                                use_norm=False,use_act=True,
                                act=nn.Tanh()))
         self.cnn = nn.Sequential(*cnn)
         ############################################
         # channels : 3  => 64 => 128 => 256 => 512          
-        # frame sz : 256=> 128 => 64  =>  32 => 16 =>8  : width
+        # frame sz : 256=> 128 => 64  =>  32 => 16 =>8 = Width and height =4 (since only upper half)        
         # height is half so : final height is 4
         # thus out of self.cnn : 512x4x8       
         ############################################
