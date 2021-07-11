@@ -35,7 +35,6 @@ class AudioEnocoder(nn.Module):
             Conv2dBlock(256,512,(4,3),(2,1),padding=1,use_norm=True,use_act=True,act=nn.ReLU()),  #2,13
             Conv2dBlock(512,512,3,1,padding=padding_31,use_norm=True,use_act=True,act=nn.ReLU(),residual=True),    
             Conv2dBlock(512,512,(2,5),(1,2),padding=(0,1),use_norm=True,use_act=True,act=nn.ReLU()),#1,6,
-            IdentityDebugLayer('final')
             )
         
         self.features_len = 6*512#out of conv layers
