@@ -1,9 +1,6 @@
 """
 Main file of the Wav2Mov Project
-
 It is the entry point to various functions
-
-
 """
 import os
 import random
@@ -42,11 +39,11 @@ def train(train_logger,args_options,config):
 def test(test_logger,args_options,config):
     test_model(args_options,params,config,test_logger)
 
-def save_message(options,config):
+def save_message(options,config,logger):
     if not getattr(options,'msg'):return
     if options.log=='n':return
     path = os.path.join(os.path.dirname(config['log_fullpath']),f'message_{config.version}.txt')
-    print('message written to ',path)
+    logger.debug('message written to %(path)s'%{'path':path})
     with open(path,'a+') as file:
         file.write(options.msg)
         file.write('\n')
@@ -80,8 +77,7 @@ if __name__ == '__main__':
     config = get_config(options.version)
     set_options(options,params)
     logger = get_logger(config,filehandler_required=options.log in ['y', 'yes'])
-        
-    save_message(options,config)
+    save_message(options,config,logger)
     try:
         main(config)
     except Exception as e: 
