@@ -9,6 +9,9 @@ wav2mov/plans/*.txt
 !wav2mov/plans/images/*.png
 *.gif
 *.pt
+*.jfif
+*.wav
+*.avi
 archieves/
 # Vs code
 .vscode
