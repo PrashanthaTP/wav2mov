@@ -78,7 +78,3 @@ def create_from_grid_dataset(config,logger):
     create(dataset,config,logger)
     print(f'{dataset.__class__.__name__} successfully processed.')
     # logger.info(log)
-
-
-if __name__ == '__main__':
-    print('No task performed.')
