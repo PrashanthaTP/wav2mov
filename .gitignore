@@ -13,7 +13,9 @@ wav2mov/plans/*.txt
 archieves/
 # Vs code
 .vscode
+#vim files
 *.vimrc
+*.*~
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
