@@ -1,3 +1,4 @@
+############################ scale for sync disc removed
 import os
 import torch
 from torch.cuda import amp
@@ -110,7 +111,7 @@ class Wav2MovTemplate(TemplateModel):
     def backward_id(self,scale):
         with amp.autocast():
             disc_out = self.id_disc(self.real_video_frames,
-                                    self.ref_video_frames)
+                                    self.real_video_frames)
             loss_id = self.criterion_gan(disc_out,
                                       is_real_target=True)/2
             disc_out = self.id_disc(self.fake_video_frames.detach(),
@@ -123,7 +124,8 @@ class Wav2MovTemplate(TemplateModel):
 
         self.scaler.scale(loss_id).backward()
         return {'id':(loss_ret,self.real_video_frames.shape[0])}
-
+    
+    
     def backward_sync(self,adversarial=False):
         # scale =  3 if adversarial else 2
         scale = 1
@@ -173,7 +175,8 @@ class Wav2MovTemplate(TemplateModel):
         self.scaler.scale(loss_seq).backward()
         return {'seq':(ret_loss,self.real_video_frames.shape[0])}
 
-    def backward_gen_id(self,adversarial,scale):
+    def backward_gen_id(self,adversarial,scale,include_l1=False):
+        self.id_disc.zero_grad(set_to_none=True)
         with amp.autocast():
             ##################################
             # ID discriminator
@@ -182,22 +185,44 @@ class Wav2MovTemplate(TemplateModel):
                                         self.ref_video_frames)
             loss_gen = self.criterion_gan(id_disc_out,
                                            is_real_target=True) * self.hparams['scales']['lambda_id_disc']/scale
-            ##################################
-            # L1 Criterion
-            ##################################
-            loss_l1 = self.criterion_L1(self.fake_video_frames,
-                                        self.real_video_frames)/scale
-            loss_l1 = loss_l1*self.hparams['scales']['lambda_L1']
-            loss_ret = {'gen':(loss_gen.item(),self.fake_video_frames.shape[0]),
-                        'l1':(loss_l1.item(),self.fake_video_frames.shape[0])}
-            loss_gen += loss_l1
+            if include_l1:
+              ##################################
+              # L1 Criterion
+              ##################################
+              loss_l1 = self.criterion_L1(self.fake_video_frames,
+                                          self.real_video_frames)/scale
+              loss_l1 = loss_l1*self.hparams['scales']['lambda_L1']
+              loss_ret = {'gen':(loss_gen.item(),self.fake_video_frames.shape[0]),
+                          'l1':(loss_l1.item(),self.fake_video_frames.shape[0])}
+
+              self.logger.debug(f'loss_gen id: {loss_gen.item():0.4f} | loss_gen l1: {loss_l1.item():0.4f} ')
+              loss_gen += loss_l1
+            else:
+              loss_ret = {'gen':(loss_gen.item(),self.fake_video_frames.shape[0])}
+              self.logger.debug(f'loss_gen id: {loss_gen.item():0.4f} ')
+
             loss_gen /= self.accumulation_steps
             
-        self.logger.debug(f'loss_gen : {loss_gen.item():0.4f} | l1_loss : {loss_l1.item():0.4f} ')
+        # self.logger.debug(f'loss_gen l1: {loss_l1.item():0.4f} ')
         self.scaler.scale(loss_gen).backward()
         return loss_ret
 
+    def backward_gen_l1(self,scale):
+      with amp.autocast():
+          ##################################
+          # L1 Criterion
+          ##################################
+          loss_l1 = self.criterion_L1(self.fake_video_frames,
+                                      self.real_video_frames)/scale
+          loss_l1 = loss_l1*self.hparams['scales']['lambda_L1']
+          loss_ret = {'l1':(loss_l1.item(),self.fake_video_frames.shape[0])}
+          loss_l1/=self.accumulation_steps
+      self.logger.debug(f'loss_gen l1: {loss_l1.item():0.4f} ')
+      self.scaler.scale(loss_l1).backward()
+      return loss_ret
+
     def backward_gen_sync(self):
+        self.sync_disc.zero_grad(set_to_none=True)
         with amp.autocast(enabled=False):
           ##################################
           # SYNC discriminator
@@ -218,6 +243,7 @@ class Wav2MovTemplate(TemplateModel):
         return {'gen' : (loss_ret,self.audio_seq.shape[0])}
 
     def backward_gen_seq(self):
+        self.seq_disc.zero_grad(set_to_none=True)
         with amp.autocast():
             seq_disc_out = self.seq_disc(self.fake_video_frames)
             
@@ -229,26 +255,27 @@ class Wav2MovTemplate(TemplateModel):
         self.scaler.scale(loss_gen).backward()
         return {'gen':(loss_ret,self.fake_video_frames.shape[0])}
     
-    def step(self):
-        self.scaler.step(self.optim_id_disc)
-        # self.scaler.step(self.optim_sync_disc)
-        self.optim_sync_disc.step()
-        self.scaler.step(self.optim_gen)
-        self.scaler.step(self.optim_seq_disc)
+    # def step(self):
+    #     self.scaler.step(self.optim_id_disc)
+    #     # self.scaler.step(self.optim_sync_disc)
+    #     self.optim_sync_disc.step()
+    #     self.scaler.step(self.optim_gen)
+    #     self.scaler.step(self.optim_seq_disc)
         
-        self.optim_gen.zero_grad(set_to_none=True)
-        self.optim_id_disc.zero_grad(set_to_none=True)
-        self.optim_sync_disc.zero_grad(set_to_none=True)
-        self.optim_seq_disc.zero_grad(set_to_none=True)
+    #     self.optim_gen.zero_grad(set_to_none=True)
+    #     self.optim_id_disc.zero_grad(set_to_none=True)
+    #     self.optim_sync_disc.zero_grad(set_to_none=True)
+    #     self.optim_seq_disc.zero_grad(set_to_none=True)
       
-        self.scaler.update()
+    #     self.scaler.update()
 
     def step_id_disc(self):
       self.scaler.step(self.optim_id_disc)
       self.optim_id_disc.zero_grad(set_to_none=True)
 
     def step_sync_disc(self):
-      self.scaler.step(self.optim_sync_disc)
+      self.optim_sync_disc.step()#no scaler applied for sync disc
+      # self.scaler.step(self.optim_sync_disc)
       self.optim_sync_disc.zero_grad(set_to_none=True)
   
     def step_seq_disc(self):
@@ -275,25 +302,30 @@ class Wav2MovTemplate(TemplateModel):
 
     def optimize_id(self,adversarial,scale):
         losses = {}
-        losses_id = self.backward_id(scale)
-        losses_gen = self.backward_gen_id(adversarial,scale)
-        losses = {**losses_id,**losses_gen}
+        if adversarial:
+          losses_id = self.backward_id(scale)
+          losses_gen = self.backward_gen_id(adversarial,scale,include_l1=True)
+          losses = {**losses,**losses_gen,**losses_id}
+        else:
+          losses_l1 = self.backward_gen_l1(scale)
+          losses = {**losses,**losses_l1}
         self.clear_input()
         return losses
     
     def optimize_sync(self,adversarial):
         losses = {}
-        if not adversarial:
-            losses = {**losses,**self.backward_sync(adversarial)}
-        else:
+        if self.hparams['train_sync']:
+          losses = {**losses,**self.backward_sync(adversarial)}
+        if adversarial:
           losses = {**losses,**self.backward_gen_sync()}
         self.clear_input()
         return losses
             
     def optimize_seq(self,adversarial):
         losses = {}
-        losses = {**losses,**self.backward_seq(adversarial)}
+        # losses = {**losses,**self.backward_seq(adversarial)}
         if adversarial:
+            losses = {**losses,**self.backward_seq(adversarial)}
             losses = {**losses,**self.backward_gen_seq()}
         self.clear_input()
         return losses
@@ -310,8 +342,12 @@ class Wav2MovTemplate(TemplateModel):
         #!RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
         """
 
-    def save_optimizers_and_schedulers(self):
-        models = ['gen','id_disc','sync_disc','seq_disc']
+    def save_optimizers_and_schedulers(self,models):
+        # if self.hparams['train_sync_expert']:
+        #   models = ['sync_disc']
+        # else:
+        #   models = ['gen','sync_disc' 'id_disc','seq_disc']
+        loaded = []
         saved = []
         for model in models:
             optim_name = f'optim_{model}'
@@ -327,11 +363,13 @@ class Wav2MovTemplate(TemplateModel):
         
         self.logger.debug(f'[SAVE] saved : {saved}')
 
-    def load_optimizers_and_schedulers(self,checkpoint_dir):
+    def load_optimizers_and_schedulers(self,checkpoint_dir,models):
         version = os.path.basename(checkpoint_dir)
         pt_file = checkpoint_dir + os.sep + '%(model)s_'+version+'.pt'
-      
-        models = ['gen', 'id_disc', 'sync_disc', 'seq_disc']
+        # if self.hparams['train_sync_expert']:
+        #   models = ['sync_disc']
+        # else:
+        #   models = ['gen', 'id_disc', 'sync_disc','seq_disc']
         loaded = []
         for model in models:
             optim_name = f'optim_{model}'
@@ -348,29 +386,53 @@ class Wav2MovTemplate(TemplateModel):
         self.logger.debug(f'[LOAD] loaded successfully {loaded}')
 
 
-    def save(self, epoch=0):
+    def save(self, epoch=0,include_sync=True):
         torch.save({'state_dict': self.gen.state_dict(), 'epoch': epoch},
-                   self.config['gen_checkpoint_fullpath'])
+                  self.config['gen_checkpoint_fullpath'])
         torch.save({'state_dict': self.seq_disc.state_dict(), 'epoch': epoch},
-                   self.config['seq_disc_checkpoint_fullpath'])
-        torch.save({'state_dict': self.sync_disc.state_dict(), 'epoch': epoch},
-                   self.config['sync_disc_checkpoint_fullpath'])
+                  self.config['seq_disc_checkpoint_fullpath'])
         torch.save({'state_dict': self.id_disc.state_dict(), 'epoch': epoch},
-                   self.config['id_disc_checkpoint_fullpath'])
+                  self.config['id_disc_checkpoint_fullpath'])
+        models = ['gen', 'id_disc','seq_disc']
+        if include_sync:
+          models.append('sync_disc')
+          torch.save({'state_dict': self.sync_disc.state_dict(), 'epoch': epoch},
+                      self.config['sync_disc_checkpoint_fullpath'])
+        self.save_optimizers_and_schedulers(models=models)
 
-        self.save_optimizers_and_schedulers()
-
-    def load(self, checkpoint_dir):
+    def load_sync_disc(self,checkpoint_dir):
         self.to(self.hparams['device'])
         version = os.path.basename(checkpoint_dir)
         pt_file = checkpoint_dir + os.sep + '%(model_name)s_'+version+'.pt'
+        checkpoint = torch.load( pt_file % {'model_name': 'sync_disc'},map_location=self.hparams['device'])
+        self.sync_disc.load_state_dict(checkpoint['state_dict'])
+        self.load_optimizers_and_schedulers(checkpoint_dir,models=['sync_disc'])
+        self.logger.debug('Sync disc was previously trained for {} epochs'.format(checkpoint['epoch']+1))
+        return  checkpoint['epoch']
+
+    def save_sync_disc(self,epoch=0):
+        torch.save({'state_dict': self.sync_disc.state_dict(), 'epoch': epoch},
+                   self.config['sync_disc_checkpoint_fullpath'])
+        self.save_optimizers_and_schedulers(models=['sync_disc'])
+
+    def load(self, checkpoint_dir,include_sync=True):
+        self.to(self.hparams['device'])
+        version = os.path.basename(checkpoint_dir)
+        pt_file = checkpoint_dir + os.sep + '%(model_name)s_'+version+'.pt'
+        models = ['gen','id_disc','seq_disc']
         try:
+            if include_sync:
+              models.append('sync_disc')
+              self.sync_disc.load_state_dict(torch.load( pt_file % {'model_name': 'sync_disc'},map_location=self.hparams['device'])['state_dict'])
+            # if self.hparams['train_sync_expert']:
+            #   self.load_optimizers_and_schedulers(checkpoint_dir)
+            #   return  torch.load(pt_file % {'model_name': 'sync_disc'})['epoch']
+
             self.gen.load_state_dict(torch.load(pt_file % {'model_name': 'gen'},map_location=self.hparams['device'])['state_dict'])
-            self.sync_disc.load_state_dict(torch.load( pt_file % {'model_name': 'sync_disc'},map_location=self.hparams['device'])['state_dict'])
             self.seq_disc.load_state_dict(torch.load( pt_file % {'model_name': 'seq_disc'},map_location=self.hparams['device'])['state_dict'])
             self.id_disc.load_state_dict(torch.load(pt_file % {'model_name': 'id_disc'},map_location=self.hparams['device'])['state_dict'])
             
-            self.load_optimizers_and_schedulers(checkpoint_dir)
+            self.load_optimizers_and_schedulers(checkpoint_dir,models=models)
             
             return torch.load(pt_file % {'model_name': 'gen'})['epoch']
         except Exception as e:
