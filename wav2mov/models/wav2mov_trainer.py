@@ -1,7 +1,3 @@
-"""
-Supports BATCHING  
-audio windowing with coarticulation factor and lr scheduling(new version)
-"""
 import random
 import torch
 
@@ -17,7 +13,7 @@ class Wav2MovTrainer(TemplateModel):
         self.hparams = hparams
         self.config = config
         self.logger = logger
-        self.train_sync_expert = True
+        self.is_training_sync_expert = True
         self.set_device()
         
     def set_device(self):
@@ -38,16 +34,23 @@ class Wav2MovTrainer(TemplateModel):
         self.accumulation_steps = self.hparams['data']['batch_size']//self.hparams['data']['mini_batch_size']
         self.zero_grad(set_to_none=True)
         audio_sf = self.hparams['data']['audio_sf']
-        coarticulation_factor = self.hparams['data']['coarticulation_factor']
-        self.audio_util = AudioUtil(audio_sf,coarticulation_factor,self.__get_stride(),device=self.hparams['device']) 
+        self.audio_util = AudioUtil(audio_sf,self.hparams['data']['coarticulation_factor'],self.__get_stride(),device=self.hparams['device']) 
 
     def save(self,*args,**kwargs):
-        self.model.save(*args,**kwargs)
+        if self.hparams['train_sync_expert']:
+           self.model.save_sync_disc(*args,**kwargs)
+           return
+        self.model.save(*args,**kwargs,include_sync=False)
         
     def load(self,*args,**kwargs):
-        ret = self.model.load(*args,**kwargs)
+        if self.hparams['train_sync_expert']:
+          self.logger.debug(f'loading sync expert from {kwargs["checkpoint_dir"]}')
+          ret = self.model.load_sync_disc(*args,**kwargs)
+        else:
+          ret = self.model.load_sync_disc(checkpoint_dir=self.config['sync_expert_checkpoint_fullpath'])
+          ret = self.model.load(*args,**kwargs,include_sync=False)
         return ret
-        
+
     def to_device(self,*args):
         return [arg.to(self.device) for arg in args]
     
@@ -58,9 +61,22 @@ class Wav2MovTrainer(TemplateModel):
         self.fake_video_frames = None
         self.model.clear_input()
         
-    def on_epoch_start(self,state):
-        if state.epoch == self.hparams['pre_learning_epochs']:
-          self.logger.debug(f'============================== Adversarial traininig with id disc and sync disc starts now ================================')
+    def on_run_start(self,state):
+        if self.hparams["train_sync_expert"]:
+          self.logger.debug("===================== Training Sync Expert =======================")
+          return 
+        debug_string = "============================== Adversarial traininig with "
+        print(vars(state))
+        if state.start_epoch>=self.hparams['adversarial_with_id']:
+          debug_string += "id disc "
+        if self.hparams['adversarial_with_sync']<=state.start_epoch<self.hparams['stop_adversarial_with_sync']:
+          debug_string += "sync disc "
+        if state.start_epoch>=self.hparams['adversarial_with_seq']:
+          debug_string += "seq disc "
+        debug_string += "="*15
+        self.logger.debug(debug_string)  
+        if state.start_epoch>self.hparams['stop_adversarial_with_sync']      :
+          self.logger.debug("====================== Sync disc turned off ======================")
 
     def on_batch_start(self,state):
         self.clear_input()
@@ -72,7 +88,7 @@ class Wav2MovTrainer(TemplateModel):
         self.audio = audio
         self.audio_frames = audio_frames
         self.video = video
-        self.logger.debug(f'input {video.shape}')
+        self.logger.debug(f'input {video.shape} {self.audio_frames.shape} {self.audio.shape}')
         
     def squeeze_frames(self,item):
         batch_size,num_frames,*extra = item.shape
@@ -186,7 +202,9 @@ class Wav2MovTrainer(TemplateModel):
             start_fraction = end_fraction
             yield batch
             
-    def __optimize(self,adversarial):     
+    def __optimize(self,adversarial_with_id,
+                      adversarial_with_sync,
+                      adversarial_with_seq):     
         self.fake_video_frames = None
         num_frames_fraction = self.hparams['num_frames_fraction']
         losses = {'gen':(0.0,0),
@@ -197,25 +215,28 @@ class Wav2MovTrainer(TemplateModel):
           
         for sub_batch in self.__get_sub_batch(fraction=num_frames_fraction):
             self.model.set_input(sub_batch)
-            loss_id_dict = self.model.optimize_id(adversarial=adversarial,scale=num_frames_fraction)
+            loss_id_dict = self.model.optimize_id(adversarial=adversarial_with_id,scale=num_frames_fraction)
             losses = self._merge_losses(losses,loss_id_dict)
         
-        self.model.step_id_disc()
+        if adversarial_with_id:
+          self.model.step_id_disc()
         ##############################################
-        if adversarial and  self.train_sync_expert:#at the end of prelearning
-            self.train_sync_expert = False
+        if adversarial_with_sync and  self.is_training_sync_expert:#at the end of prelearning
+            self.is_training_sync_expert = False
             self.model.freeze_sync_disc()
             # self.model.freeze_seq_disc()
         ##############################################
       
         self.model.set_input(self.get_sub_seq(for_sync_disc=True))
-        loss_sync_dict = self.model.optimize_sync(adversarial)
-        if not adversarial:
+        loss_sync_dict = self.model.optimize_sync(adversarial_with_sync)
+        if not adversarial_with_sync and self.is_training_sync_expert:#while building sync expert
             self.model.step_sync_disc()
 
-        self.model.set_input(self.get_sub_seq(for_sync_disc=False))#if not generated again , the computation graph would not be available
-        loss_seq_dict = self.model.optimize_seq(adversarial=True)
-        self.model.step_seq_disc()
+        loss_seq_dict = {}
+        if adversarial_with_seq:
+          self.model.set_input(self.get_sub_seq(for_sync_disc=False))#if not generated again , the computation graph would not be available
+          loss_seq_dict = self.model.optimize_seq(adversarial=adversarial_with_seq)
+          self.model.step_seq_disc()
 
         self.clear_input()#clears even the input video
         losses = self._merge_losses(losses,loss_sync_dict,loss_seq_dict)
@@ -238,9 +259,25 @@ class Wav2MovTrainer(TemplateModel):
                 merged_losses[key] = (prev_loss+loss,prev_n+n)
         return merged_losses
 
+    def train_sync_expert(self,):
+        self.model.set_input(self.get_sub_seq(for_sync_disc=True))
+        loss_sync_dict = self.model.optimize_sync(adversarial=False)
+        self.model.step_sync_disc()
+        # self.model.update_scale()
+        return loss_sync_dict
+
     def optimize(self,state):
         epoch = state.epoch
-        losses = self.__optimize(adversarial=((epoch)>=self.hparams['pre_learning_epochs']))
+
+        if self.hparams['train_sync_expert']:
+          return self.train_sync_expert()
+        
+        adversarial_with_id = epoch >= self.hparams['adversarial_with_id']
+        adversarial_with_sync = self.hparams['adversarial_with_sync']<=epoch<self.hparams['stop_adversarial_with_sync']
+        adversarial_with_seq = epoch >= self.hparams['adversarial_with_seq']
+        losses = self.__optimize(adversarial_with_id=adversarial_with_id,
+                                adversarial_with_sync=adversarial_with_sync,
+                                adversarial_with_seq=adversarial_with_seq)
         # batch_idx = state.epoch
         # if (batch_idx+1)%self.accumulation_steps:
         #     self.model.step()
