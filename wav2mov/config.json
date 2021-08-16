@@ -1,0 +1,30 @@
+{
+	"fixed": {
+		"seed": 10,
+		"grid_dataset_dir": "D:\\dataset_lip\\GRID"
+	},
+	"runtime": {
+		"runs_dir": "%(base_dir)s\\runs\\%(v)s\\%(version)s",
+		"log_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\%(log_filename)s.log",
+		"train_test_dataset_dir": "%(base_dir)s\\datasets\\grid_dataset_a5_500_a10to14",
+		"filenames_txt": "%(base_dir)s\\datasets\\grid_dataset_a5_500_a10to14\\filenames.txt",
+		"filenames_train_txt": "%(base_dir)s\\datasets\\grid_dataset_a5_500_a10to14\\filenames_train.txt",
+		"filenames_test_txt": "%(base_dir)s\\datasets\\grid_dataset_a5_500_a10to14\\filenames_test.txt",
+		"gen_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\gen_%(version)s.pt",
+		"seq_disc_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\seq_disc_%(version)s.pt",
+		"sync_disc_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\sync_disc_%(version)s.pt",
+		"sync_expert_checkpoint_fullpath": "/content/drive/MyDrive/Colab Notebooks/wav2mov-dev_phase_8/wav2mov/runs/sync_expert/Run_11_7_2021__13_36",
+		"id_disc_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\id_disc_%(version)s.pt",
+		"params_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\hparams_%(version)s.json",
+		"optim_gen_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\optim_gen_%(version)s.pt",
+		"optim_seq_disc_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\optim_seq_disc_%(version)s.pt",
+		"optim_sync_disc_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\optim_sync_disc_%(version)s.pt",
+		"optim_id_disc_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\optim_id_disc_%(version)s.pt",
+		"optim_params_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\optim_hparams_%(version)s.json",
+		"scheduler_gen_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\scheduler_gen_%(version)s.pt",
+		"scheduler_seq_disc_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\scheduler_seq_disc_%(version)s.pt",
+		"scheduler_sync_disc_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\scheduler_sync_disc_%(version)s.pt",
+		"scheduler_id_disc_checkpoint_fullpath": "%(base_dir)s\\runs\\%(v)s\\%(version)s\\scheduler_id_disc_%(version)s.pt",
+		"out_dir": "%(base_dir)s\\out\\%(v)s"
+	}
+}

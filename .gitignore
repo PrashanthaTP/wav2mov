@@ -1,13 +1,24 @@
-
 shape_predictor_68_face_landmarks.dat
-datasets/
-runs/
-logs/
+wav2mov/datasets/*
+!wav2mov/datasets/create_file_list.py
+wav2mov/runs/
+wav2mov/logs/
+wav2mov/tests/res
+wav2mov/plans/*.txt
 *.png
+!wav2mov/plans/images/*.png
+!wav2mov-docs/*.png
 *.gif
-*Run_*
+*.pt
+*.jfif
+*.wav
+*.avi
+archieves/
 # Vs code
 .vscode
+#vim files
+*.vimrc
+*.*~
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
