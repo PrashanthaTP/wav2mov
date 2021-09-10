@@ -14,7 +14,7 @@ This repo contains the pytorch implementation of achieving facial animation from
 ## References
 
 <a id="1" href="https://arxiv.org/abs/1406.2661">[1] Generative Adversarial Nets</a>
-```
+```bibtex
 @article{goodfellow2014generative,
   title={Generative adversarial networks},
   author={Goodfellow, Ian J and Pouget-Abadie, Jean and Mirza, Mehdi and Xu, Bing and Warde-Farley, David and Ozair, Sherjil and Courville, Aaron and Bengio, Yoshua},
@@ -27,7 +27,7 @@ This repo contains the pytorch implementation of achieving facial animation from
 
 [![Github stars](https://img.shields.io/badge/Dataset-LombardGrid-<COLOR>.svg)](http://spandh.dcs.shef.ac.uk/avlombard/)
 
-```
+```bibtex
 @article{Alghamdi_2018,
 	doi = {10.1121/1.5042758},
 	url = {https://doi.org/10.1121%2F1.5042758},
@@ -47,7 +47,7 @@ This repo contains the pytorch implementation of achieving facial animation from
 
 [![Github stars](https://img.shields.io/badge/Github-sda-<COLOR>.svg)](https://github.com/DinoMan/speech-driven-animation)
 
-``` 
+```bibtex
 @article{Vougioukas_2019,
 	doi = {10.1007/s11263-019-01251-8},
 	url = {https://doi.org/10.1007%2Fs11263-019-01251-8},
@@ -64,7 +64,7 @@ This repo contains the pytorch implementation of achieving facial animation from
 ```
 
 <a id="#4" href="https://arxiv.org/abs/1805.09313">[4] End to End Facial Animation using Temporal GANs</a>
-```
+```bibtex
 @article{vougioukas2018end,
   title={End-to-end speech-driven facial animation with temporal gans},
   author={Vougioukas, Konstantinos and Petridis, Stavros and Pantic, Maja},
@@ -77,7 +77,7 @@ This repo contains the pytorch implementation of achieving facial animation from
 
 
 [![Github stars](https://img.shields.io/badge/Github-wav2Lip-<COLOR>.svg)](https://github.com/Rudrabha/Wav2Lip)
-```
+```bibtex
 @inproceedings{10.1145/3394171.3413532,
 author = {Prajwal, K R and Mukhopadhyay, Rudrabha and Namboodiri, Vinay P. and Jawahar, C.V.},
 title = {A Lip Sync Expert Is All You Need for Speech to Lip Generation In the Wild},
