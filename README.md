@@ -5,7 +5,12 @@
 
 [![python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/) [![pytorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=PyTorch&logoColor=white)](https://pytorch.org/) [![GANs](https://img.shields.io/badge/GANs-4BB749?style=for-the-badge&logo=&logoColor=white)](#1)
 
-This repo contains the pytorch implementation of achieving facial animation from given face image and speech input using Generative Adversarial Nets [[1]](#1).
+This repo contains the pytorch implementation of achieving facial animation from given face image and speech input using Generative Adversarial Nets (See [References](#1)).
+
+
+## Results
+
+Some of the generated videos are found [here](https://wav2mov-examples.vercel.app/examples).
 
 ## Implementation
 ### GAN setup
